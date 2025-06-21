@@ -7,6 +7,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.5
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/zenhack/go.notmuch v0.0.0-20220918173508-0c918632c39e
+	gopkg.in/ini.v1 v1.67.0
 )
 
 require (

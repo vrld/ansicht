@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/vrld/ansicht/internal/db"
 	"github.com/vrld/ansicht/internal/model"
 )
 
@@ -106,11 +107,15 @@ func NewModel() Model {
 		Bold(true)
 	t.SetStyles(tableStyles)
 
-	return Model{
-		queries: []model.SearchQuery{
-			// TODO: use named queries from notmuch config
+	queries, err := db.GetSavedQueries()
+	if err != nil || len(queries) == 0 {
+		queries = []model.SearchQuery{
 			{Name: "INBOX", Query: "query:INBOX"},
-		},
+		}
+	}
+
+	return Model{
+		queries:           queries,
 		currentQueryIndex: 0,
 		focusSearch:       false,
 		input:             ti,

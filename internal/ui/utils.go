@@ -45,11 +45,11 @@ func flagsToString(flags model.MessageFlags) string {
 		flagStr.WriteString(" ")
 	}
 
-	if flags.Passed {
-		flagStr.WriteString("P")
-	} else {
-		flagStr.WriteString(" ")
-	}
+	//if flags.Passed {
+	//	flagStr.WriteString("P")
+	//} else {
+	//	flagStr.WriteString(" ")
+	//}
 
 	if flags.Replied {
 		flagStr.WriteString("R")
@@ -63,11 +63,11 @@ func flagsToString(flags model.MessageFlags) string {
 		flagStr.WriteString(" ")
 	}
 
-	if flags.Trashed {
-		flagStr.WriteString("T")
-	} else {
-		flagStr.WriteString(" ")
-	}
+	//if flags.Trashed {
+	//	flagStr.WriteString("T")
+	//} else {
+	//	flagStr.WriteString(" ")
+	//}
 
 	return flagStr.String()
 }

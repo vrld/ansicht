@@ -70,15 +70,15 @@ func ThreadFromNotmuch(nmThread *notmuch.Thread) model.Thread {
 
 func MessageFromNotmuch(nmMessage *notmuch.Message) model.Message {
 	return model.Message{
-		ID:       nmMessage.ID(),
+		ID:       model.MessageID(nmMessage.ID()),
 		ThreadID: nmMessage.ThreadID(),
 		Date:     nmMessage.Date(),
-		Filename: nmMessage.Filename(),
+		Filename: model.Filename(nmMessage.Filename()),
 		Tags:     ReadTags(nmMessage.Tags()),
 		From:     nmMessage.Header("from"),
 		To:       nmMessage.Header("to"),
 		Subject:  nmMessage.Header("subject"),
-		Flags:    MessageFlagsFromFilename(nmMessage.Filename()),
+		Flags:    MessageFlagsFromFilename(model.Filename(nmMessage.Filename())),
 	}
 }
 
@@ -94,15 +94,15 @@ func ReadTags(nmTags *notmuch.Tags) []string {
 	return tags
 }
 
-func MessageFlagsFromFilename(filename string) model.MessageFlags {
+func MessageFlagsFromFilename(filename model.Filename) model.MessageFlags {
 	flags := model.MessageFlags{}
 
-	flagsStartIndex := strings.LastIndex(filename, "2,")
+	flagsStartIndex := strings.LastIndex(string(filename), "2,")
 	if flagsStartIndex == -1 {
 		return flags
 	}
 
-	for _, char := range filename[flagsStartIndex+2:] {
+	for _, char := range string(filename)[flagsStartIndex+2:] {
 		switch char {
 		case 'D':
 			flags.Draft = true

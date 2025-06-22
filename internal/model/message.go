@@ -2,11 +2,15 @@ package model
 
 import "time"
 
+// Type aliases for type safety
+type MessageID string
+type Filename string
+
 type Message struct {
-	ID       string
+	ID       MessageID
 	ThreadID string
 	Date     time.Time
-	Filename string
+	Filename Filename
 	Tags     []string
 	From     string
 	To       string

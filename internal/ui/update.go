@@ -23,6 +23,7 @@ func (m Model) searchCurrentQuery() tea.Cmd {
 
 func (m *Model) setThreads(threads []model.Thread) {
 	m.threads = threads
+	m.resetSelection()
 	m.updateTable()
 }
 
@@ -48,7 +49,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// TODO: make configurable
 		columns := m.table.Columns()
 		dateWidth := 10
-		flagsWidth := 6
+		flagsWidth := 7
 		fromWidth := 20
 
 		remainingWidth := availableWidth - dateWidth - flagsWidth - fromWidth - 8 // Account for column borders/spacing
@@ -117,6 +118,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.table.SetRows([]table.Row{})
 					return m, tea.Batch(m.searchCurrentQuery(), m.spinner.Tick)
 				}
+				
+			case " ":
+				m.toggleSelection(m.table.Cursor())
+				return m, tea.WindowSize()
+				
+			case "I":
+				m.invertSelection()
+				return m, tea.WindowSize()
 			}
 		}
 	}

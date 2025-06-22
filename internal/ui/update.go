@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vrld/ansicht/internal/db"
 	"github.com/vrld/ansicht/internal/model"
@@ -24,7 +24,7 @@ func (m Model) searchCurrentQuery() tea.Cmd {
 func (m *Model) setThreads(threads []model.Thread) {
 	m.threads = threads
 	m.resetSelection()
-	m.updateTable()
+	m.updateList()
 }
 
 // Update handles messages and updates the model
@@ -42,29 +42,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
-		m.table.SetHeight(msg.Height - 4) // Allow for borders, margin, and tabs
-		availableWidth := msg.Width - 2   // Account for table borders
-
-		// determine column width.
-		// TODO: make configurable
-		columns := m.table.Columns()
-		dateWidth := 10
-		flagsWidth := 7
-		fromWidth := 20
-
-		remainingWidth := availableWidth - dateWidth - flagsWidth - fromWidth - 8 // Account for column borders/spacing
-
-		// 70% to subject, 30% to tags
-		subjectWidth := int(float64(remainingWidth) * 0.7)
-		tagsWidth := remainingWidth - subjectWidth
-
-		columns[0].Width = dateWidth    // Date
-		columns[1].Width = flagsWidth   // Flags
-		columns[2].Width = fromWidth    // From
-		columns[3].Width = subjectWidth // Subject
-		columns[4].Width = tagsWidth    // Tags
-
-		m.table.SetColumns(columns)
+		
+		// Update list height and width
+		listHeight := msg.Height - 4 // Allow for borders, margin, and tabs
+		m.list.SetHeight(listHeight)
+		m.list.SetWidth(msg.Width)
+		
+		// Update the delegate's width for proper rendering
+		delegate := NewMessageDelegate(msg.Width)
+		m.list.SetDelegate(delegate)
+		
+		// Refresh the list with the new dimensions
+		m.updateList()
 
 		return m, nil
 
@@ -80,7 +69,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					})
 					m.currentQueryIndex = len(m.queries) - 1
 					m.isLoading = true
-					m.table.SetRows([]table.Row{})
+					// Clear the list items while searching
+					m.list.SetItems([]list.Item{})
 					cmd = tea.Batch(m.searchCurrentQuery(), m.spinner.Tick)
 				}
 
@@ -107,7 +97,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.currentQueryIndex > 0 {
 					m.currentQueryIndex--
 					m.isLoading = true
-					m.table.SetRows([]table.Row{})
+					m.list.SetItems([]list.Item{})
 					return m, tea.Batch(m.searchCurrentQuery(), m.spinner.Tick)
 				}
 
@@ -115,17 +105,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.currentQueryIndex < len(m.queries)-1 {
 					m.currentQueryIndex++
 					m.isLoading = true
-					m.table.SetRows([]table.Row{})
+					m.list.SetItems([]list.Item{})
 					return m, tea.Batch(m.searchCurrentQuery(), m.spinner.Tick)
 				}
 				
 			case " ":
-				m.toggleSelection(m.table.Cursor())
-				return m, tea.WindowSize()
+				m.toggleSelection(m.list.Index())
+				return m, nil
 				
 			case "I":
 				m.invertSelection()
-				return m, tea.WindowSize()
+				return m, nil
 			}
 		}
 	}
@@ -134,7 +124,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
-	m.table, cmd = m.table.Update(msg)
+	// Update the list
+	m.list, cmd = m.list.Update(msg)
 	cmds = append(cmds, cmd)
 
 	if m.focusSearch {

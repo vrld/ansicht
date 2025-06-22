@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/vrld/ansicht/internal/db"
@@ -64,10 +64,10 @@ type Model struct {
 	threads           []model.Thread
 	isLoading         bool
 	focusSearch       bool
-	markedRows      map[int]MessageIndex
+	markedRows        map[int]MessageIndex
 	rowToMessageIndex []MessageIndex
 
-	table   table.Model
+	list    list.Model
 	input   textinput.Model
 	spinner spinner.Model
 
@@ -86,36 +86,31 @@ func NewModel() Model {
 	sp.Spinner = spinner.Dot
 	sp.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("62"))
 
-	// results table
-	// TODO: columns configurable
-	columns := []table.Column{
-		{Title: "Date", Width: 10},
-		{Title: "Flags", Width: 6},
-		{Title: "From", Width: 20},
-		{Title: "Subject", Width: 40},
-		{Title: "Tags", Width: 20},
-	}
-
-	t := table.New(
-		table.WithColumns(columns),
-		table.WithRows([]table.Row{}),
-		table.WithFocused(true),
-		table.WithHeight(10),
-	)
-
-	tableStyles := table.DefaultStyles()
-	tableStyles.Header = tableStyles.Header.
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		BorderBottom(true).
-		Bold(true)
-	tableStyles.Selected = tableStyles.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
-		Bold(true)
+	// Default width (will be updated on WindowSizeMsg)
+	defaultWidth := 96
 	
-	t.SetStyles(tableStyles)
+	// Create the message list with a custom delegate
+	delegate := NewMessageDelegate(defaultWidth)
+	messageList := list.New([]list.Item{}, delegate, defaultWidth, 20)
+	messageList.SetShowStatusBar(false)
+	messageList.SetFilteringEnabled(false)
+	messageList.SetShowTitle(false)
+	messageList.SetShowHelp(false)
+	messageList.DisableQuitKeybindings()
+	
+	// Style the list
+	listStyles := list.DefaultStyles()
+	listStyles.Title = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("231")).
+		Background(lipgloss.Color("25")).
+		Padding(0, 1)
+	listStyles.NoItems = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Align(lipgloss.Center)
+	messageList.Styles = listStyles
 
+	// Get saved queries
 	queries, err := db.GetSavedQueries()
 	if err != nil || len(queries) == 0 {
 		queries = []model.SearchQuery{
@@ -127,12 +122,12 @@ func NewModel() Model {
 		queries:           queries,
 		currentQueryIndex: 0,
 		focusSearch:       false,
-		markedRows:      make(map[int]MessageIndex),
+		markedRows:        make(map[int]MessageIndex),
 		rowToMessageIndex: make([]MessageIndex, 0),
 		input:             ti,
-		table:             t,
+		list:              messageList,
 		spinner:           sp,
-		width:             96,
+		width:             defaultWidth,
 	}
 }
 
@@ -163,7 +158,7 @@ func (m *Model) isRowSelected(row int) bool {
 
 func (m *Model) resetSelection() {
 	m.markedRows = make(map[int]MessageIndex)
-	m.updateTable()  // TODO: swap table for a list and remove this
+	m.updateList()
 }
 
 func (m *Model) invertSelection() {
@@ -175,15 +170,22 @@ func (m *Model) invertSelection() {
 		}
 	}
 	m.markedRows = newSelection
-	m.updateTable()  // TODO: swap table for a list and remove this
+	m.updateList()
 }
 
 func (m *Model) toggleSelection(row int) {
+	if row < 0 || row >= len(m.rowToMessageIndex) {
+		return
+	}
+	
 	if m.isRowSelected(row) {
 		delete(m.markedRows, row)
 	} else {
 		m.markedRows[row] = m.rowToMessageIndex[row]
 	}
+	
+	// Update the list to reflect the selection change
+	m.updateList()
 }
 
 func (m *Model) GetSelectedMessages() []*model.Message {
@@ -202,37 +204,29 @@ func (m *Model) GetSelectedMessages() []*model.Message {
 	return selected
 }
 
-// updates the table with the current thread data
-func (m *Model) updateTable() {
-	var rows []table.Row
+// updateList refreshes the list with current thread data
+func (m *Model) updateList() {
 	m.rowToMessageIndex = make([]MessageIndex, 0, len(m.threads)*2)
 
 	for threadIdx, thread := range m.threads {
-		for messageIdx, message := range thread.Messages {
+		for messageIdx := range thread.Messages {
 			m.rowToMessageIndex = append(m.rowToMessageIndex, MessageIndex{
 				ThreadIdx:  threadIdx,
 				MessageIdx: messageIdx,
 			})
-
-			// Indicate selection status with a visual marker
-			flagsStr := flagsToString(message.Flags)
-			if m.isRowSelected(len(m.rowToMessageIndex) - 1) {
-				flagsStr += "•"
-			} else {
-				flagsStr += "-"
-			}
-
-			rows = append(rows, table.Row{
-				formatDate(message.Date),
-				flagsStr,
-				truncate(message.From, 20),
-				truncate(message.Subject, 40),
-				formatTags(message.Tags),
-			})
 		}
 	}
 
-	m.table.SetRows(rows)
+	// Create list items
+	items := CreateMessageItems(m.threads, m.markedRows)
+	
+	// Update the list with new items
+	m.list.SetItems(items)
+	
+	// Preserve cursor position if possible
+	if m.list.Index() >= len(items) && len(items) > 0 {
+		m.list.Select(len(items) - 1)
+	}
 }
 
 func (m Model) renderTabs() string {
@@ -255,7 +249,7 @@ func (m Model) View() string {
 	// Build the status line with selection count if needed
 	bottom_line := "Press / to search, ←/→ to switch tabs, <space> to select, I to invert selection, q to quit"
 	if len(m.markedRows) > 0 {
-		bottom_line = fmt.Sprintf("%v selected | %s", m.markedRows, bottom_line)
+		bottom_line = fmt.Sprintf("%d selected | %s", len(m.markedRows), bottom_line)
 	}
 	
 	if m.isLoading {
@@ -268,7 +262,7 @@ func (m Model) View() string {
 
 	return fmt.Sprintf(
 		"%s\n%s\n%s",
-		m.table.View(),
+		m.list.View(),
 		tabs,
 		bottom_line,
 	)

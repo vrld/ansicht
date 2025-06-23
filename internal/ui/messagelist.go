@@ -25,19 +25,19 @@ func (i MessageItem) FilterValue() string {
 		return ""
 	}
 	// Return all searchable fields concatenated
-	return fmt.Sprintf("%s %s %s", 
-		i.Message.From, 
-		i.Message.Subject, 
+	return fmt.Sprintf("%s %s %s",
+		i.Message.From,
+		i.Message.Subject,
 		strings.Join(i.Message.Tags, " "))
 }
 
 // MessageDelegate is a custom delegate for rendering message items
 type MessageDelegate struct {
 	styles struct {
-		Normal  lipgloss.Style
+		Normal   lipgloss.Style
 		Selected lipgloss.Style
-		Marked  lipgloss.Style
-		Dim     lipgloss.Style
+		Marked   lipgloss.Style
+		Dim      lipgloss.Style
 	}
 	width int
 }
@@ -118,11 +118,11 @@ func (d MessageDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 	tags := truncate(formatTags(item.Message.Tags), tagsWidth)
 
 	// Format the message line
-	str := fmt.Sprintf("%s %s %-*s %-*s %-*s", 
-		date, 
-		flags, 
-		fromWidth, from, 
-		subjectWidth, subject, 
+	str := fmt.Sprintf("%s %s %-*s %-*s %-*s",
+		date,
+		flags,
+		fromWidth, from,
+		subjectWidth, subject,
 		tagsWidth, tags)
 
 	fmt.Fprint(w, style.Render(str))
@@ -149,7 +149,7 @@ func CreateMessageItems(threads []model.Thread, markedRows map[int]MessageIndex)
 				Message:    &thread.Messages[messageIdx],
 				Marked:     marked,
 			})
-			
+
 			rowIdx++
 		}
 	}

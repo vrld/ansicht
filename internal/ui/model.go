@@ -8,14 +8,16 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/vrld/ansicht/internal/runtime"
 	"github.com/vrld/ansicht/internal/db"
 	"github.com/vrld/ansicht/internal/model"
 )
 
 // sent when a search completes
 type SearchResultMsg struct {
-	Result model.SearchResult
-	Error  error
+	Result      model.SearchResult
+	Error       error
+	RowToSelect int
 }
 
 // tabStyle defines the styling for tabs
@@ -59,6 +61,7 @@ type MessageIndex struct {
 }
 
 type Model struct {
+	config            *runtime.Config
 	queries           []model.SearchQuery
 	currentQueryIndex int
 	threads           []model.Thread
@@ -74,7 +77,7 @@ type Model struct {
 	width int
 }
 
-func NewModel() Model {
+func NewModel(config *runtime.Config) Model {
 	// search box
 	ti := textinput.New()
 	ti.Placeholder = "tag:unread" // TODO: random *valid* query
@@ -88,7 +91,7 @@ func NewModel() Model {
 
 	// Default width (will be updated on WindowSizeMsg)
 	defaultWidth := 96
-	
+
 	// Create the message list with a custom delegate
 	delegate := NewMessageDelegate(defaultWidth)
 	messageList := list.New([]list.Item{}, delegate, defaultWidth, 20)
@@ -97,7 +100,7 @@ func NewModel() Model {
 	messageList.SetShowTitle(false)
 	messageList.SetShowHelp(false)
 	messageList.DisableQuitKeybindings()
-	
+
 	// Style the list
 	listStyles := list.DefaultStyles()
 	listStyles.Title = lipgloss.NewStyle().
@@ -119,6 +122,7 @@ func NewModel() Model {
 	}
 
 	return Model{
+		config:            config,
 		queries:           queries,
 		currentQueryIndex: 0,
 		focusSearch:       false,
@@ -177,31 +181,43 @@ func (m *Model) toggleSelection(row int) {
 	if row < 0 || row >= len(m.rowToMessageIndex) {
 		return
 	}
-	
+
 	if m.isRowSelected(row) {
 		delete(m.markedRows, row)
 	} else {
 		m.markedRows[row] = m.rowToMessageIndex[row]
 	}
-	
+
 	// Update the list to reflect the selection change
 	m.updateList()
 }
 
 func (m *Model) GetSelectedMessages() []*model.Message {
-	if len(m.markedRows) == 0 {
+	if len(m.rowToMessageIndex) == 0 {
 		return nil
 	}
-	
-	selected := make([]*model.Message, 0, len(m.markedRows))
-	
-	for _, idx := range m.markedRows {
-		if idx.ThreadIdx < len(m.threads) && idx.MessageIdx < len(m.threads[idx.ThreadIdx].Messages) {
+
+	selected := make([]*model.Message, 0, len(m.markedRows)+1)
+
+	active_row := m.list.Index()
+	if idx := m.rowToMessageIndex[active_row]; m.isValidMessageIndex(idx) {
+		selected = append(selected, &m.threads[idx.ThreadIdx].Messages[idx.MessageIdx])
+	}
+
+	for row, idx := range m.markedRows {
+		if row != active_row && m.isValidMessageIndex(idx) {
 			selected = append(selected, &m.threads[idx.ThreadIdx].Messages[idx.MessageIdx])
 		}
 	}
-	
+
 	return selected
+}
+
+func (m *Model) isValidMessageIndex(idx MessageIndex) bool {
+	return (idx.ThreadIdx >= 0) &&
+		(idx.ThreadIdx < len(m.threads)) &&
+		(idx.MessageIdx >= 0) &&
+		(idx.MessageIdx < len(m.threads[idx.ThreadIdx].Messages))
 }
 
 // updateList refreshes the list with current thread data
@@ -219,10 +235,10 @@ func (m *Model) updateList() {
 
 	// Create list items
 	items := CreateMessageItems(m.threads, m.markedRows)
-	
+
 	// Update the list with new items
 	m.list.SetItems(items)
-	
+
 	// Preserve cursor position if possible
 	if m.list.Index() >= len(items) && len(items) > 0 {
 		m.list.Select(len(items) - 1)
@@ -251,7 +267,7 @@ func (m Model) View() string {
 	if len(m.markedRows) > 0 {
 		bottom_line = fmt.Sprintf("%d selected | %s", len(m.markedRows), bottom_line)
 	}
-	
+
 	if m.isLoading {
 		bottom_line = fmt.Sprintf("%s Searching...", m.spinner.View())
 	}

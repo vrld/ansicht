@@ -1,7 +1,7 @@
 # Ansicht
 
 `ansicht` is a minimal [notmuch](https://notmuchmail.org/) TUI. It shows a list
-of search results and let's you tag and process messages with external tools, like `einsicht`.
+of search results and let's you tag and process messages with external tools, like [`einsicht`](https://github.com/vrld/einsicht).
 `ansicht` is meant to be used as part of a bigger
 mail system, like *übersicht* (which, as of now, exists mostly in my imagination).
 

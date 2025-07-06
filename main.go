@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// Load configuration
-	config, err := runtime.LoadConfig()
+	config, err := runtime.LoadRuntime()
 	if err != nil {
 		log.Fatalf("Error loading configuration: %v", err)
 	}

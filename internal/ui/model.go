@@ -61,7 +61,7 @@ type MessageIndex struct {
 }
 
 type Model struct {
-	config            *runtime.Config
+	config            *runtime.Runtime
 	queries           []model.SearchQuery
 	currentQueryIndex int
 	threads           []model.Thread
@@ -77,7 +77,7 @@ type Model struct {
 	width int
 }
 
-func NewModel(config *runtime.Config) Model {
+func NewModel(config *runtime.Runtime) Model {
 	// search box
 	ti := textinput.New()
 	ti.Placeholder = "tag:unread" // TODO: random *valid* query

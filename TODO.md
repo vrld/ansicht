@@ -1,10 +1,5 @@
 # TODO
 
-- refactor runtime:
-  - messages.go: bubbletea messages
-  - runtime.go: model and library
-  - implement in Go where it makes sense
-
 - Add synchronization between lua tables and go slices
   - toSlice(L, index)
   - pushTable(L, slice)

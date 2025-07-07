@@ -1,15 +1,11 @@
 # TODO
 
-- Add synchronization between lua tables and go slices
-  - toSlice(L, index)
-  - pushTable(L, slice)
+- Make commands / events userdata
+  - L.NewMetaTable to create named metatable
+  - L.TestUserData to verify type
+  - L.ToUserData to recover the event
 
-- Add binding to clear selection
-
-- Add lua binding to get the selected messages
-
-- Refactor config.parseTeaCommand to have arguments
-  - Arguments depend on the message
+- Add command to clear selection
 
 - Refactor search as general input, move behavior to query
 
@@ -26,6 +22,6 @@
 - Implement tag function
 
       keys["t"] = cmd.input(function(tags)
-        tag(tags, std.selection())
+        notmuch.tag(...)
         return cmd.refresh
       end)

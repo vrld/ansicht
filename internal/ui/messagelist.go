@@ -9,14 +9,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/vrld/ansicht/internal/model"
+	"github.com/vrld/ansicht/internal/service"
 )
 
 // MessageItem represents a single message in the list
 type MessageItem struct {
-	ThreadIdx  int
-	MessageIdx int
-	Message    *model.Message
-	Marked     bool
+	Message *model.Message
+	Marked  bool
 }
 
 // FilterValue returns the value used for filtering the list
@@ -49,24 +48,10 @@ func NewMessageDelegate(width int) MessageDelegate {
 	}
 
 	// Set up styles for different states
-	d.styles.Normal = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252")).
-		Width(width)
-
-	d.styles.Selected = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
-		Bold(true).
-		Width(width)
-
-	d.styles.Marked = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("231")).
-		Background(lipgloss.Color("25")).
-		Width(width)
-
-	d.styles.Dim = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240")).
-		Width(width)
+	d.styles.Normal = styleMessageNormal.Width(width)
+	d.styles.Selected = styleMessageSelected.Width(width)
+	d.styles.Marked = styleMessageMarked.Width(width)
+	d.styles.Dim = styleMessageDim.Width(width)
 
 	return d
 }
@@ -128,30 +113,14 @@ func (d MessageDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 	fmt.Fprint(w, style.Render(str))
 }
 
-// CreateMessageItems converts threads to a list of message items
-func CreateMessageItems(threads []model.Thread, markedRows map[int]MessageIndex) []list.Item {
+func CreateMessageItems(messages *service.Messages) []list.Item {
 	var items []list.Item
-	rowIdx := 0
 
-	for threadIdx, thread := range threads {
-		for messageIdx, _ := range thread.Messages {
-			// Check if this message is marked
-			marked := false
-			if idx, ok := markedRows[rowIdx]; ok {
-				if idx.ThreadIdx == threadIdx && idx.MessageIdx == messageIdx {
-					marked = true
-				}
-			}
-
-			items = append(items, MessageItem{
-				ThreadIdx:  threadIdx,
-				MessageIdx: messageIdx,
-				Message:    &thread.Messages[messageIdx],
-				Marked:     marked,
-			})
-
-			rowIdx++
-		}
+	for row, message := range messages.GetAll() {
+		items = append(items, MessageItem{
+			Message: message,
+			Marked:  messages.IsMarked(row),
+		})
 	}
 
 	return items

@@ -3,35 +3,13 @@ package ui
 import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/vrld/ansicht/internal/runtime"
 	"github.com/vrld/ansicht/internal/db"
 	"github.com/vrld/ansicht/internal/model"
+	"github.com/vrld/ansicht/internal/runtime"
 )
 
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(m.searchCurrentQuery(0), m.spinner.Tick)
-}
-
-func (m *Model) searchCurrentQuery(rowToSelect int) tea.Cmd {
-	return func() tea.Msg {
-		if query := m.CurrentQuery(); query != nil {
-			result, err := db.FindThreads(query)
-			return SearchResultMsg{Result: result, Error: err, RowToSelect: rowToSelect}
-		}
-		return nil
-	}
-}
-
-func (m *Model) loadCurrentQuery(rowToSelect int) tea.Cmd {
-	m.isLoading = true
-	m.list.SetItems([]list.Item{})
-	return tea.Batch(m.searchCurrentQuery(rowToSelect), m.spinner.Tick)
-}
-
-func (m *Model) setThreads(threads []model.Thread) {
-	m.threads = threads
-	m.resetSelection()
-	m.updateList()
 }
 
 // Update handles messages and updates the model
@@ -43,15 +21,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// TODO: Show error in UI
 			return m, nil
 		}
-		m.setThreads(msg.Result.Threads)
-		m.list.Select(msg.RowToSelect)
+		m.messages.SetThreads(msg.Result.Threads)
+		m.updateList(msg.RowToSelect)
 		return m, nil
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 
 		// Update list height and width
-		listHeight := msg.Height - 4 // Allow for borders, margin, and tabs
+		listHeight := msg.Height - 6 // Allow for borders, margin, and tabs
 		m.list.SetHeight(listHeight)
 		m.list.SetWidth(msg.Width)
 
@@ -60,7 +38,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.list.SetDelegate(delegate)
 
 		// Refresh the list with the new dimensions
-		m.updateList()
+		m.updateList(m.list.Index())
 
 		return m, nil
 
@@ -93,11 +71,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// item selection
 	case runtime.SelectionToggleMsg:
-		m.toggleSelection(m.list.Index())
+		m.messages.ToggleMark(m.list.Index())
+		m.updateList(m.list.Index())
 		return m, nil
 
 	case runtime.SelectionInvertMsg:
-		m.invertSelection()
+		m.messages.InvertMarks()
+		m.updateList(m.list.Index())
 		return m, nil
 
 	// key presses
@@ -124,8 +104,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.input.Reset()
 				return m, nil
 			}
-		} else if cmd := m.config.OnKey(msg.String(), m.GetSelectedMessages()); cmd != nil {
-			return m, cmd
+		} else {
+			m.messages.Select(m.list.Index())
+			if cmd := m.KeyReceiver.OnKey(msg.String()); cmd != nil {
+				return m, cmd
+			}
 		}
 	}
 
@@ -147,4 +130,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) searchCurrentQuery(rowToSelect int) tea.Cmd {
+	return func() tea.Msg {
+		if query := m.CurrentQuery(); query != nil {
+			result, err := db.FindThreads(query)
+			return SearchResultMsg{Result: result, Error: err, RowToSelect: rowToSelect}
+		}
+		return nil
+	}
+}
+
+func (m *Model) loadCurrentQuery(rowToSelect int) tea.Cmd {
+	m.isLoading = true
+	m.list.SetItems([]list.Item{})
+	return tea.Batch(m.searchCurrentQuery(rowToSelect), m.spinner.Tick)
+}
+
+func (m *Model) updateList(toSelect int) {
+	items := CreateMessageItems(m.messages)
+
+	m.list.SetItems(items)
+	m.list.Select(toSelect)
+	m.messages.Select(toSelect)
 }

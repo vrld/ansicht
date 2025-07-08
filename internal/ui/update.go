@@ -4,7 +4,6 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vrld/ansicht/internal/db"
-	"github.com/vrld/ansicht/internal/model"
 	"github.com/vrld/ansicht/internal/runtime"
 )
 
@@ -54,19 +53,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// switch between queries
 	case runtime.QueryNextMsg:
-		if len(m.queries) <= 1 {
-			return m, nil
-		}
-
-		m.currentQueryIndex = (m.currentQueryIndex + 1) % len(m.queries)
+		m.queries.SelectNext()
 		return m, m.loadCurrentQuery(0)
 
 	case runtime.QueryPrevMsg:
-		if len(m.queries) <= 1 {
-			return m, nil
-		}
-
-		m.currentQueryIndex = (m.currentQueryIndex - 1 + len(m.queries)) % len(m.queries)
+		m.queries.SelectPrevious()
 		return m, m.loadCurrentQuery(0)
 
 	// item selection
@@ -87,11 +78,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				var cmd tea.Cmd
 				if query := m.input.Value(); query != "" {
-					m.queries = append(m.queries, model.SearchQuery{
-						Name:  truncate(query, 16),
-						Query: query,
-					})
-					m.currentQueryIndex = len(m.queries) - 1
+					m.queries.AddQuery(truncate(query, 16), query)
+					m.queries.SelectLast()
 					cmd = m.loadCurrentQuery(0)
 				}
 
@@ -134,8 +122,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) searchCurrentQuery(rowToSelect int) tea.Cmd {
 	return func() tea.Msg {
-		if query := m.CurrentQuery(); query != nil {
-			result, err := db.FindThreads(query)
+		if query, ok := m.queries.Current(); ok {
+			result, err := db.FindThreads(&query)
 			return SearchResultMsg{Result: result, Error: err, RowToSelect: rowToSelect}
 		}
 		return nil

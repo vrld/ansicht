@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/vrld/ansicht/internal/db"
 	"github.com/vrld/ansicht/internal/model"
 	"github.com/vrld/ansicht/internal/service"
 )
@@ -28,8 +27,7 @@ type KeyReceiver interface {
 type Model struct {
 	KeyReceiver       KeyReceiver
 	messages          *service.Messages
-	queries           []model.SearchQuery
-	currentQueryIndex int
+	queries          *service.Queries
 	isLoading         bool
 	focusSearch       bool
 
@@ -40,7 +38,7 @@ type Model struct {
 	width int
 }
 
-func NewModel(messages *service.Messages) *Model {
+func NewModel(messages *service.Messages, queries *service.Queries) *Model {
 	// search box
 	ti := textinput.New()
 	ti.Placeholder = "tag:unread" // TODO: random *valid* query
@@ -70,18 +68,9 @@ func NewModel(messages *service.Messages) *Model {
 	listStyles.NoItems = styleListNoItems
 	messageList.Styles = listStyles
 
-	// Get saved queries
-	queries, err := db.GetSavedQueries()
-	if err != nil || len(queries) == 0 {
-		queries = []model.SearchQuery{
-			{Name: "INBOX", Query: "query:INBOX"},
-		}
-	}
-
 	return &Model{
 		messages:          messages,
 		queries:           queries,
-		currentQueryIndex: 0,
 		focusSearch:       false,
 		input:             ti,
 		list:              messageList,
@@ -90,18 +79,11 @@ func NewModel(messages *service.Messages) *Model {
 	}
 }
 
-func (m *Model) CurrentQuery() *model.SearchQuery {
-	if m.currentQueryIndex < len(m.queries) {
-		return &m.queries[m.currentQueryIndex]
-	}
-	return nil
-}
-
 func (m Model) renderTabs() string {
 	var tabs []string
-	for i, query := range m.queries {
+	for i, query := range m.queries.All() {
 		style := styleTabNormal
-		if i == m.currentQueryIndex {
+		if i == m.queries.SelectedIndex() {
 			style = styleTabActive
 		}
 		tabs = append(tabs, style.Render(query.Name))

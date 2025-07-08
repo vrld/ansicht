@@ -12,6 +12,7 @@ import (
 
 func main() {
 	messages := service.NewMessages()
+	queries := service.NewQueries()
 
 	// Load configuration
 	runtime, err := runtime.LoadRuntime()
@@ -21,7 +22,7 @@ func main() {
 	runtime.Messages = messages
 
 	// Initialize UI model
-	model := ui.NewModel(messages)
+	model := ui.NewModel(messages, queries)
 	model.KeyReceiver = runtime
 
 	// Start the application

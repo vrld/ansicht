@@ -1,10 +1,5 @@
 # TODO
 
-- Make commands / events userdata
-  - L.NewMetaTable to create named metatable
-  - L.TestUserData to verify type
-  - L.ToUserData to recover the event
-
 - Add command to clear selection
 
 - Refactor search as general input, move behavior to query

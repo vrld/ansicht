@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	_ "embed"
+
 	lua "github.com/Shopify/go-lua"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vrld/ansicht/internal/model"
@@ -17,8 +19,13 @@ type Runtime struct {
 	Messages *service.Messages
 }
 
-// Call key binding defined in config. If the binding exists, it is a function that
-// will receive the given messages as arguments, e.g., `key['d'] = function(m1, m2, ...) [...] end`
+// Call key binding defined in config. If the binding exists, it is an event from the
+// `event` table, or a  function with no arguments that returns an event or nil, e.g.,
+//
+//	key.q = event.quit()  -- this is a quit event instance
+//	-- these are functions that return a refresh event:
+//	key.r = event.refresh
+//	key['d'] = function(m1, m2, ...) [...] return event.refresh() end
 func (c *Runtime) OnKey(keycode string) tea.Cmd {
 	// leave stack in clean state on early exit
 	top := c.luaState.Top()
@@ -32,9 +39,8 @@ func (c *Runtime) OnKey(keycode string) tea.Cmd {
 
 	c.luaState.Field(-1, keycode)
 
-	// string -> emit event
-	if c.luaState.IsString(-1) {
-		cmd, _ := c.parseTeaCommand(1)
+	// Userdata -> emit event
+	if cmd, err := c.getTeaCommand(-1); err == nil {
 		return cmd
 	}
 
@@ -42,47 +48,25 @@ func (c *Runtime) OnKey(keycode string) tea.Cmd {
 		return nil
 	}
 
-	c.luaState.Call(0, lua.MultipleReturns) // TODO: MultipleReturns; get number as luaState.Top() - top
-	count_return_values := c.luaState.Top() - top - 1
-	cmd, _ := c.parseTeaCommand(count_return_values)
-
+	c.luaState.Call(0, 1)
+	cmd, _ := c.getTeaCommand(-1)
 	return cmd
 }
 
-func (c *Runtime) parseTeaCommand(count_return_values int) (tea.Cmd, error) {
-	// TODO: these should be userdata, not string
-	value, ok := c.luaState.ToString(-count_return_values) // first return value is the event name
-	if !ok {
-		return nil, fmt.Errorf("cannot parse value as string")
+func (c *Runtime) getTeaCommand(index int) (tea.Cmd, error) {
+	if !c.luaState.IsUserData(index) {
+		return nil, fmt.Errorf("not a userdata at index: %d", index)
 	}
 
-	switch value {
-	case "quit":
+	value := c.luaState.ToUserData(index)
+	switch value.(type) {
+	case tea.QuitMsg:
 		return tea.Quit, nil
-
-	case "query.new":
-		return QueryNew, nil
-
-	case "query.next":
-		return QueryNext, nil
-
-	case "query.prev":
-		return QueryPrev, nil
-
-	case "selection.toggle":
-		return SelectionToggle, nil
-
-	case "selection.invert":
-		return SelectionInvert, nil
-
-	case "refresh":
-		// TODO: parse arguments, e.g.:
-		// ids := tableToSlice(c.luaState, -count_return_values + 1, c.luaState.ToString)
-		// return RefreshResults{ids: ids}, nil
-		return RefreshResults, nil
+	case RefreshResultsMsg, QueryNewMsg, QueryNextMsg, QueryPrevMsg, MarkToggleMsg, MarkInvertMsg:
+		return (func() tea.Msg { return value }), nil
+	default:
+		return nil, fmt.Errorf("invalid message type: %v", value)
 	}
-
-	return nil, fmt.Errorf("unknown signal: %s", value)
 }
 
 func luaNotmuchTag(L *lua.State) int {
@@ -211,59 +195,8 @@ func isMessage(L *lua.State, index int) bool {
 	return false
 }
 
-const defaultConfig = `
-key.q = cmd.quit
-key["ctrl+c"] = key.q
-key["ctrl+d"] = key.q
-
-key["/"] = cmd.query.new
-key.left = cmd.query.prev
-key.right = cmd.query.next
-
-key[" "] = cmd.selection.toggle
-key.i = cmd.selection.invert
-
-key.r = cmd.refresh
-
-local function messages_of_interest()
-	local selected = messages.selected()
-	local moi = { selected }
-	for _, message in pairs(messages.marked()) do
-		if selected ~= message then
-			moi[#moi + 1] = message
-		end
-	end
-	return moi
-end
-
-local function bind_tag_messages_of_interest(tags)
-	return function()
-		notmuch.tag(messages_of_interest(), table.unpack(tags))
-		return cmd.refresh
-	end
-end
-
-key.d = bind_tag_messages_of_interest{ "+deleted", "-unread", "-inbox" }
-key.a = bind_tag_messages_of_interest{ "+archive", "-inbox" }
-key.u = bind_tag_messages_of_interest{ "+unread" }
-
-key.enter = function()
-	-- TODO: async 'spawn(command, arg, arg, arg)'
-	local message = messages.selected()
-	local command = table.concat{
-	  "/home/matthias/Projekte/übersicht.mail/einsicht/build/bin/einsicht",
-		" ",
-		message.filename,
-		">/dev/null",
-		" ",
-		"2>&1"
-	}
-	if pcall(os.execute, command) then
-		notmuch.tag(message, "-unread")
-	end
-	return cmd.refresh
-end
-`
+//go:embed default_config.lua
+var defaultConfig string
 
 func LoadRuntime() (*Runtime, error) {
 	// Try XDG_CONFIG_HOME first
@@ -302,6 +235,7 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 	})
 	L.SetGlobal("notmuch")
 
+	// messages access
 	lua.NewLibrary(L, []lua.RegistryFunction{
 		{Name: "all", Function: runtime.luaMessagesAll},
 		{Name: "marked", Function: runtime.luaMessagesMarked},
@@ -309,21 +243,30 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 	})
 	L.SetGlobal("messages")
 
-	// TODO: make these userdata of the actual messages
-	lua.DoString(L, `cmd = {
-		query = {
-			new = "query.new",
-			next = "query.next",
-			prev = "query.prev",
-		},
-		quit = "quit",
-		refresh = "refresh",
-		selection = {
-			toggle = "selection.toggle",
-			invert = "selection.invert",
-		},
-	}`)
+	// commands / events
+	lua.NewLibrary(L, []lua.RegistryFunction{
+		{Name: "refresh", Function: luaPushRefresh},
+		{Name: "quit", Function: luaPushQuit},
+	})
 
+	// query subgroup
+	lua.NewLibrary(L, []lua.RegistryFunction{
+		{Name: "new", Function: luaPushQueryNew},
+		{Name: "next", Function: luaPushQueryNext},
+		{Name: "prev", Function: luaPushQueryPrev},
+	})
+	L.SetField(-2, "query")
+
+	// marks subgroup
+	lua.NewLibrary(L, []lua.RegistryFunction{
+		{Name: "toggle", Function: luaPushMarkToggle},
+		{Name: "invert", Function: luaPushMarkInvert},
+	})
+	L.SetField(-2, "marks")
+
+	L.SetGlobal("event")
+
+	// load config
 	if err := lua.DoString(L, luaCode); err != nil {
 		return nil, fmt.Errorf("error executing Lua config: %w", err)
 	}

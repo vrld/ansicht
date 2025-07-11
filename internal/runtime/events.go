@@ -1,22 +1,48 @@
 package runtime
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	"github.com/Shopify/go-lua"
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 type RefreshResultsMsg struct{} // TODO: add args: which messages? => reqires more parsing
-func RefreshResults() tea.Msg   { return RefreshResultsMsg{} }
-
-// navigation
 type QueryNewMsg struct{}
 type QueryNextMsg struct{}
 type QueryPrevMsg struct{}
+type MarkToggleMsg struct{}
+type MarkInvertMsg struct{}
 
-func QueryNew() tea.Msg  { return QueryNewMsg{} }
-func QueryNext() tea.Msg { return QueryNextMsg{} }
-func QueryPrev() tea.Msg { return QueryPrevMsg{} }
+func luaPushRefresh(L *lua.State) int {
+	L.PushUserData(RefreshResultsMsg{})
+	return 1
+}
 
-// selection
-type SelectionToggleMsg struct{}
-type SelectionInvertMsg struct{}
+func luaPushQuit(L *lua.State) int {
+	L.PushUserData(tea.QuitMsg{})
+	return 1
+}
 
-func SelectionToggle() tea.Msg { return SelectionToggleMsg{} }
-func SelectionInvert() tea.Msg { return SelectionInvertMsg{} }
+func luaPushQueryNew(L *lua.State) int {
+	L.PushUserData(QueryNewMsg{})
+	return 1
+}
+
+func luaPushQueryNext(L *lua.State) int {
+	L.PushUserData(QueryNextMsg{})
+	return 1
+}
+
+func luaPushQueryPrev(L *lua.State) int {
+	L.PushUserData(QueryPrevMsg{})
+	return 1
+}
+
+func luaPushMarkToggle(L *lua.State) int {
+	L.PushUserData(MarkToggleMsg{})
+	return 1
+}
+
+func luaPushMarkInvert(L *lua.State) int {
+	L.PushUserData(MarkInvertMsg{})
+	return 1
+}

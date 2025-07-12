@@ -64,4 +64,5 @@ key.d = tag_selected_messages { "+deleted", "-unread", "-inbox" }
 key.a = tag_selected_messages { "+archive", "-inbox" }
 key.u = tag_selected_messages { "+unread" }
 
+key.x = event.marks.clear
 key.t = function() return messages.selected() end

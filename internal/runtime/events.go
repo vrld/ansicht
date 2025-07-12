@@ -9,8 +9,9 @@ type RefreshResultsMsg struct{} // TODO: add args: which messages? => reqires mo
 type QueryNewMsg struct{}
 type QueryNextMsg struct{}
 type QueryPrevMsg struct{}
-type MarkToggleMsg struct{}
-type MarkInvertMsg struct{}
+type MarksToggleMsg struct{}
+type MarksInvertMsg struct{}
+type MarksClearMsg struct{}
 
 func luaPushRefresh(L *lua.State) int {
 	L.PushUserData(RefreshResultsMsg{})
@@ -37,12 +38,17 @@ func luaPushQueryPrev(L *lua.State) int {
 	return 1
 }
 
-func luaPushMarkToggle(L *lua.State) int {
-	L.PushUserData(MarkToggleMsg{})
+func luaPushMarksToggle(L *lua.State) int {
+	L.PushUserData(MarksToggleMsg{})
 	return 1
 }
 
-func luaPushMarkInvert(L *lua.State) int {
-	L.PushUserData(MarkInvertMsg{})
+func luaPushMarksInvert(L *lua.State) int {
+	L.PushUserData(MarksInvertMsg{})
+	return 1
+}
+
+func luaPushMarksClear(L *lua.State) int {
+	L.PushUserData(MarksClearMsg{})
 	return 1
 }

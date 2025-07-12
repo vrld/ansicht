@@ -1,7 +1,5 @@
 # TODO
 
-- Add command to clear selection
-
 - Refactor search as general input, move behavior to query
 
       keys["/"] = cmd.input(function(query)

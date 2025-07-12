@@ -61,13 +61,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.loadCurrentQuery(0)
 
 	// item selection
-	case runtime.MarkToggleMsg:
+	case runtime.MarksToggleMsg:
 		m.messages.ToggleMark(m.list.Index())
 		m.updateList(m.list.Index())
 		return m, nil
 
-	case runtime.MarkInvertMsg:
+	case runtime.MarksInvertMsg:
 		m.messages.InvertMarks()
+		m.updateList(m.list.Index())
+		return m, nil
+
+	case runtime.MarksClearMsg:
+		m.messages.ClearMarks()
 		m.updateList(m.list.Index())
 		return m, nil
 

@@ -19,182 +19,6 @@ type Runtime struct {
 	Messages *service.Messages
 }
 
-// Call key binding defined in config. If the binding exists, it is an event from the
-// `event` table, or a  function with no arguments that returns an event or nil, e.g.,
-//
-//	key.q = event.quit()  -- this is a quit event instance
-//	-- these are functions that return a refresh event:
-//	key.r = event.refresh
-//	key['d'] = function(m1, m2, ...) [...] return event.refresh() end
-func (c *Runtime) OnKey(keycode string) tea.Cmd {
-	// leave stack in clean state on early exit
-	top := c.luaState.Top()
-	defer c.luaState.SetTop(top)
-
-	// get binding
-	c.luaState.Global("key")
-	if !c.luaState.IsTable(-1) {
-		return nil
-	}
-
-	c.luaState.Field(-1, keycode)
-
-	// Userdata -> emit event
-	if cmd, err := c.getTeaCommand(-1); err == nil {
-		return cmd
-	}
-
-	if !c.luaState.IsFunction(-1) {
-		return nil
-	}
-
-	c.luaState.Call(0, 1)
-	cmd, _ := c.getTeaCommand(-1)
-	return cmd
-}
-
-func (c *Runtime) getTeaCommand(index int) (tea.Cmd, error) {
-	if !c.luaState.IsUserData(index) {
-		return nil, fmt.Errorf("not a userdata at index: %d", index)
-	}
-
-	value := c.luaState.ToUserData(index)
-	switch value.(type) {
-	case tea.QuitMsg:
-		return tea.Quit, nil
-	case RefreshResultsMsg, QueryNewMsg, QueryNextMsg, QueryPrevMsg, MarkToggleMsg, MarkInvertMsg:
-		return (func() tea.Msg { return value }), nil
-	default:
-		return nil, fmt.Errorf("invalid message type: %v", value)
-	}
-}
-
-func luaNotmuchTag(L *lua.State) int {
-	argc := L.Top()
-	if argc < 1 {
-		lua.Errorf(L, "invalid arguments")
-		panic("unreachable")
-	}
-
-	var messageIds []string
-
-	if isMessage(L, 1) {
-		if id, ok := getMessageField(L, 1, "id"); ok {
-			messageIds = append(messageIds, "id:"+id)
-		}
-	} else if L.IsTable(1) {
-		count := L.RawLength(1)
-		for i := 1; i <= count; i++ {
-			L.RawGetInt(1, i)
-			if id, ok := getMessageField(L, -1, "id"); ok {
-				messageIds = append(messageIds, "id:"+id)
-			}
-			L.Pop(1)
-		}
-	} else {
-		lua.Errorf(L, "Neither a message nor a table of messages")
-		panic("unreachable")
-	}
-
-	if len(messageIds) > 0 {
-		args := []string{"tag"}
-		for i := 2; i <= L.Top(); i++ {
-			if tag, ok := L.ToString(i); ok {
-				args = append(args, tag)
-			}
-		}
-
-		args = append(args, messageIds...)
-
-		cmd := exec.Command("notmuch", args...)
-		cmd.Run()
-	}
-
-	return 0
-}
-
-func getMessageField(L *lua.State, index int, field string) (string, bool) {
-	if !isMessage(L, index) {
-		return "", false
-	}
-
-	L.Field(index, field)
-	value, ok := L.ToString(-1)
-	L.Pop(1)
-
-	return value, ok
-}
-
-func (c *Runtime) luaMessagesAll(L *lua.State) int {
-	pushMessagesTable(L, c.Messages.GetAll())
-	return 1
-}
-
-func (c *Runtime) luaMessagesSelected(L *lua.State) int {
-	pushMessage(L, c.Messages.GetSelected())
-	return 1
-}
-
-func (c *Runtime) luaMessagesMarked(L *lua.State) int {
-	pushMessagesTable(L, c.Messages.GetMarked())
-	return 1
-}
-
-func pushMessagesTable(L *lua.State, messages []*model.Message) {
-	L.CreateTable(len(messages), 0)
-	for i, msg := range messages {
-		pushMessage(L, msg)
-		L.RawSetInt(-2, i+1)
-	}
-}
-
-func pushMessage(L *lua.State, message *model.Message) int {
-	L.PushUserData(message)
-
-	L.CreateTable(0, 5)
-	L.PushString("ansicht.Message")
-	L.SetField(-2, "__name")
-
-	L.PushString(string(message.ID))
-	L.SetField(-2, "id")
-
-	L.PushString(string(message.ThreadID))
-	L.SetField(-2, "thread_id")
-
-	L.PushString(string(message.Filename))
-	L.SetField(-2, "filename")
-
-	// metatable.__index = metatable
-	L.PushValue(-1)
-	L.SetField(-2, "__index")
-
-	L.SetMetaTable(-2)
-
-	return 1
-}
-
-func isMessage(L *lua.State, index int) bool {
-	if !L.IsUserData(index) {
-		return false
-	}
-
-	// leave a tidy stack
-	top := L.Top()
-	defer L.SetTop(top)
-
-	// check metatable.__name
-	if !L.MetaTable(index) {
-		return false
-	}
-
-	L.Field(-1, "__name")
-	if name, ok := L.ToString(-1); ok {
-		return name == "ansicht.Message"
-	}
-
-	return false
-}
-
 //go:embed default_config.lua
 var defaultConfig string
 
@@ -259,8 +83,9 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 
 	// marks subgroup
 	lua.NewLibrary(L, []lua.RegistryFunction{
-		{Name: "toggle", Function: luaPushMarkToggle},
-		{Name: "invert", Function: luaPushMarkInvert},
+		{Name: "toggle", Function: luaPushMarksToggle},
+		{Name: "invert", Function: luaPushMarksInvert},
+		{Name: "clear", Function: luaPushMarksClear},
 	})
 	L.SetField(-2, "marks")
 
@@ -272,4 +97,184 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 	}
 
 	return runtime, nil
+}
+
+// Call key binding defined in config. If the binding exists, it is an event from the
+// `event` table, or a  function with no arguments that returns an event or nil, e.g.,
+//
+//	key.q = event.quit()  -- this is a quit event instance
+//	-- these are functions that return a refresh event:
+//	key.r = event.refresh
+//	key['d'] = function(m1, m2, ...) [...] return event.refresh() end
+func (c *Runtime) OnKey(keycode string) tea.Cmd {
+	// leave stack in clean state on early exit
+	top := c.luaState.Top()
+	defer c.luaState.SetTop(top)
+
+	// get binding
+	c.luaState.Global("key")
+	if !c.luaState.IsTable(-1) {
+		return nil
+	}
+
+	c.luaState.Field(-1, keycode)
+
+	// Userdata -> emit event
+	if cmd, err := c.getTeaCommand(-1); err == nil {
+		return cmd
+	}
+
+	if !c.luaState.IsFunction(-1) {
+		return nil
+	}
+
+	c.luaState.Call(0, 1)
+	cmd, _ := c.getTeaCommand(-1)
+	return cmd
+}
+
+func (c *Runtime) getTeaCommand(index int) (tea.Cmd, error) {
+	if !c.luaState.IsUserData(index) {
+		return nil, fmt.Errorf("not a userdata at index: %d", index)
+	}
+
+	value := c.luaState.ToUserData(index)
+	// NOTE: invalid events will be ignored by the event loop, so we don't need to filter
+	return (func() tea.Msg { return value }), nil
+}
+
+// lua api
+// notmuch.tag({messages}, tag1, tag2, ..., tag3)
+// notmuch.tag(message, tag1, tag2, ..., tag3)
+// equivalent to: `notmuch tag tag1 tag2 tag3 id:... id:... ...`
+func luaNotmuchTag(L *lua.State) int {
+	argc := L.Top()
+	if argc < 1 {
+		lua.Errorf(L, "invalid arguments")
+		panic("unreachable")
+	}
+
+	var messageIds []string
+
+	if isMessage(L, 1) {
+		if id, ok := getMessageField(L, 1, "id"); ok {
+			messageIds = append(messageIds, "id:"+id)
+		}
+	} else if L.IsTable(1) {
+		count := L.RawLength(1)
+		for i := 1; i <= count; i++ {
+			L.RawGetInt(1, i)
+			if id, ok := getMessageField(L, -1, "id"); ok {
+				messageIds = append(messageIds, "id:"+id)
+			}
+			L.Pop(1)
+		}
+	} else {
+		lua.Errorf(L, "Neither a message nor a table of messages")
+		panic("unreachable")
+	}
+
+	if len(messageIds) > 0 {
+		args := []string{"tag"}
+		for i := 2; i <= L.Top(); i++ {
+			if tag, ok := L.ToString(i); ok {
+				args = append(args, tag)
+			}
+		}
+
+		args = append(args, messageIds...)
+
+		cmd := exec.Command("notmuch", args...)
+		cmd.Run()
+	}
+
+	return 0
+}
+
+// returns message[field] where message is the message userdata at `index` on the stack
+// converts objects to string according to Lua rules
+func getMessageField(L *lua.State, index int, field string) (string, bool) {
+	if !isMessage(L, index) {
+		return "", false
+	}
+
+	L.Field(index, field)
+	value, ok := L.ToString(-1)
+	L.Pop(1)
+
+	return value, ok
+}
+
+// put all messages on the stack
+func (c *Runtime) luaMessagesAll(L *lua.State) int {
+	pushMessagesTable(L, c.Messages.GetAll())
+	return 1
+}
+
+// put selected/highligted message on the stack
+func (c *Runtime) luaMessagesSelected(L *lua.State) int {
+	pushMessage(L, c.Messages.GetSelected())
+	return 1
+}
+
+// put marked messages on the stack
+func (c *Runtime) luaMessagesMarked(L *lua.State) int {
+	pushMessagesTable(L, c.Messages.GetMarked())
+	return 1
+}
+
+// pushes a table of messages on the stack
+func pushMessagesTable(L *lua.State, messages []*model.Message) {
+	L.CreateTable(len(messages), 0)
+	for i, msg := range messages {
+		pushMessage(L, msg)
+		L.RawSetInt(-2, i+1)
+	}
+}
+
+func pushMessage(L *lua.State, message *model.Message) int {
+	L.PushUserData(message)
+
+	L.CreateTable(0, 5)
+	L.PushString("ansicht.Message")
+	L.SetField(-2, "__name")
+
+	L.PushString(string(message.ID))
+	L.SetField(-2, "id")
+
+	L.PushString(string(message.ThreadID))
+	L.SetField(-2, "thread_id")
+
+	L.PushString(string(message.Filename))
+	L.SetField(-2, "filename")
+
+	// metatable.__index = metatable
+	L.PushValue(-1)
+	L.SetField(-2, "__index")
+
+	L.SetMetaTable(-2)
+
+	return 1
+}
+
+func isMessage(L *lua.State, index int) bool {
+	if !L.IsUserData(index) {
+		return false
+	}
+
+	// leave a tidy stack
+	top := L.Top()
+	defer L.SetTop(top)
+
+	// check metatable.__name
+	if !L.MetaTable(index) {
+		return false
+	}
+
+	L.Field(-1, "__name")
+	if name, ok := L.ToString(-1); ok {
+		return name == "ansicht.Message"
+	}
+
+	return false
 }

@@ -25,11 +25,11 @@ type KeyReceiver interface {
 }
 
 type Model struct {
-	KeyReceiver       KeyReceiver
-	messages          *service.Messages
-	queries          *service.Queries
-	isLoading         bool
-	focusSearch       bool
+	KeyReceiver KeyReceiver
+	messages    *service.Messages
+	queries     *service.Queries
+	isLoading   bool
+	focusSearch bool
 
 	list    list.Model
 	input   textinput.Model
@@ -69,13 +69,13 @@ func NewModel(messages *service.Messages, queries *service.Queries) *Model {
 	messageList.Styles = listStyles
 
 	return &Model{
-		messages:          messages,
-		queries:           queries,
-		focusSearch:       false,
-		input:             ti,
-		list:              messageList,
-		spinner:           sp,
-		width:             defaultWidth,
+		messages:    messages,
+		queries:     queries,
+		focusSearch: false,
+		input:       ti,
+		list:        messageList,
+		spinner:     sp,
+		width:       defaultWidth,
 	}
 }
 

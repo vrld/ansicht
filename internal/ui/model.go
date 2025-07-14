@@ -24,6 +24,11 @@ type KeyReceiver interface {
 	OnKey(keycode string) tea.Cmd
 }
 
+type InputHandler interface {
+	PushInputHandle(handle string)
+	HandleInput(input string) tea.Cmd
+}
+
 type Model struct {
 	KeyReceiver KeyReceiver
 	messages    *service.Messages
@@ -31,9 +36,10 @@ type Model struct {
 	isLoading   bool
 	focusSearch bool
 
-	list    list.Model
-	input   textinput.Model
-	spinner spinner.Model
+	InputHandler   InputHandler
+	list           list.Model
+	input          textinput.Model
+	spinner        spinner.Model
 
 	width int
 }

@@ -24,6 +24,7 @@ func main() {
 	// Initialize UI model
 	model := ui.NewModel(messages, queries)
 	model.KeyReceiver = runtime
+	model.InputHandler = runtime
 
 	// Start the application
 	p := tea.NewProgram(model, tea.WithAltScreen())

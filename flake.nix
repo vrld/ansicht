@@ -10,7 +10,24 @@
     flake-utils.lib.eachDefaultSystem (system:
     let
       pkgs = import nixpkgs { inherit system; };
+      ansicht = pkgs.buildGoModule {
+        pname = "ansicht";
+        version = "0.0.1";
+        src = ./.;
+        # vendorHash = pkgs.lib.fakeHash;
+        vendorHash = "sha256-0fohCgdRgu16HT/F3ixVrPVatw17CBv6dsx5WdWHqxM=";
+
+        meta = {
+          license = pkgs.lib.licenses.mit;
+        };
+
+      };
     in {
+      packages = {
+        inherit ansicht;
+        default = ansicht;
+      };
+
       devShells.default = pkgs.mkShell {
         hardeningDisable = ["fortify"];
         buildInputs = with pkgs; [

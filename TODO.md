@@ -1,26 +1,34 @@
 # TODO
 
-- Refactor search as general input, move behavior to query
+- Add prompt to input message
 
-      keys["/"] = cmd.input(function(query)
-        return cmd.query.new(query)
-      end)
+- Add input history based on prompt
+  - navigate with arrow keys
 
-  - `cmd.input` enters interactive mode (ref `m.focusSearch`)
-  - takes a function as argument
-  - once finished, the function will be called with the input text and the selected messages
-  - result will give the next command
-  - `cmd.query` signals to search for the given query (new event)
+- Add async `spawn` method to execute shell commands in the background
+  - use `spawn` in key.enter binding:
 
-- Implement tag function
+        key.enter = function()
+          local message = messages.selected()
+          spawn("einsicht", message.filename)
+          notmuch.tag(message, "-unread")
+        end
 
-      keys["t"] = cmd.input(function(tags)
-        notmuch.tag(...)
-        return cmd.refresh
-      end)
+- Tab completion on input
 
-- Add async spawn method to execute shell commands in the background
-  - use spawn in key.enter binding
+- Investigate the use of the repeated function calling in OnKey:
+
+        function decorate(fun)
+            some_stuff()
+            event = fun()
+            return modify(event)
+        end
+
+        key.enter = decorate(function() ... end)
+
+- Add error event
+
+      key.e = event.error("test error")
 
 - Tweak UI Layout:
   > {query} {%d marked}/{%d total}

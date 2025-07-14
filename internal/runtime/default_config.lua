@@ -15,7 +15,10 @@ key["ctrl+c"] = key.q
 key["ctrl+d"] = key.q
 
 -- create and navigate queries
-key["/"] = event.query.new()
+key["/"] = event.input {
+  placeholder = "tag:unread",
+  with_input = event.query.new
+}
 key.left = event.query.prev()
 key.right = event.query.next()
 
@@ -43,26 +46,42 @@ end
 -- wrapper function that returns a function that tags selected messages
 -- with the given tags and returns a refresh event
 local function tag_selected_messages(tags)
-  return function()
-    local selected = messages.selected()
-    local messages_of_interest = { selected }
-    -- messages.marked() gives a table of all messages marked with event.marks.*
-    for _, message in pairs(messages.marked()) do
-      if selected ~= message then
-        messages_of_interest[#messages_of_interest + 1] = message
-      end
+  local selected = messages.selected()
+  local messages_of_interest = { selected }
+  -- messages.marked() gives a table of all messages marked with event.marks.*
+  for _, message in pairs(messages.marked()) do
+    if selected ~= message then
+      messages_of_interest[#messages_of_interest + 1] = message
     end
-    -- notmuch.tag({msg1, msg2}, "+tag1", "-tag2", "+tag3")
-    -- equivalent to notmuch tag +tag1 -tag2 +tag3 id:... id:...
-    notmuch.tag(messages_of_interest, table.unpack(tags))
+  end
+  -- notmuch.tag({msg1, msg2}, "+tag1", "-tag2", "+tag3")
+  -- equivalent to notmuch tag +tag1 -tag2 +tag3 id:... id:...
+  notmuch.tag(messages_of_interest, table.unpack(tags))
 
-    return event.refresh(messages_of_interest)
+  return event.refresh(messages_of_interest)
+end
+
+local function tag_selected_messages_event(tags)
+  return function()
+    return tag_selected_messages(tags)
   end
 end
 
-key.d = tag_selected_messages { "+deleted", "-unread", "-inbox" }
-key.a = tag_selected_messages { "+archive", "-inbox" }
-key.u = tag_selected_messages { "+unread" }
+key.d = tag_selected_messages_event { "+deleted", "-unread", "-inbox" }
+key.a = tag_selected_messages_event { "+archive", "-inbox" }
+key.u = tag_selected_messages_event { "+unread" }
 
 key.x = event.marks.clear
-key.t = function() return messages.selected() end
+key.t = event.input {
+  placeholder = "-unread +act",
+  with_input = function(tags_str)
+    local idx_space = tags_str:find(" ")
+    local tags = { tags_str:sub(1, idx_space) }
+    while idx_space ~= nil do
+      local next_word_idx = idx_space + 1
+      idx_space = tags_str:find(" ", next_word_idx)
+      tags[#tags + 1] = tags_str:sub(next_word_idx, idx_space)
+    end
+    return tag_selected_messages(tags)
+  end,
+}

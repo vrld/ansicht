@@ -14,13 +14,19 @@ import (
 	"github.com/vrld/ansicht/internal/service"
 )
 
+type InputCallbackHandle string
+
 type Runtime struct {
-	luaState *lua.State
-	Messages *service.Messages
+	luaState           *lua.State
+	Messages           *service.Messages
+	inputCallbackStack []InputCallbackHandle
 }
 
 //go:embed default_config.lua
 var defaultConfig string
+
+//go:embed lua_runtime.lua
+var luaRuntime string
 
 func LoadRuntime() (*Runtime, error) {
 	// Try XDG_CONFIG_HOME first
@@ -71,6 +77,9 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 	lua.NewLibrary(L, []lua.RegistryFunction{
 		{Name: "refresh", Function: luaPushRefresh},
 		{Name: "quit", Function: luaPushQuit},
+		{Name: "input", Function: func(L *lua.State) int {
+			return luaPushInput(L, len(runtime.inputCallbackStack))
+		}},
 	})
 
 	// query subgroup
@@ -91,6 +100,10 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 
 	L.SetGlobal("event")
 
+	if err := lua.DoString(L, luaRuntime); err != nil {
+		panic(err)
+	}
+
 	// load config
 	if err := lua.DoString(L, luaCode); err != nil {
 		return nil, fmt.Errorf("error executing Lua config: %w", err)
@@ -106,41 +119,74 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 //	-- these are functions that return a refresh event:
 //	key.r = event.refresh
 //	key['d'] = function(m1, m2, ...) [...] return event.refresh() end
-func (c *Runtime) OnKey(keycode string) tea.Cmd {
+func (r *Runtime) OnKey(keycode string) tea.Cmd {
 	// leave stack in clean state on early exit
-	top := c.luaState.Top()
-	defer c.luaState.SetTop(top)
+	top := r.luaState.Top()
+	defer r.luaState.SetTop(top)
 
 	// get binding
-	c.luaState.Global("key")
-	if !c.luaState.IsTable(-1) {
+	r.luaState.Global("key")
+	if !r.luaState.IsTable(-1) {
 		return nil
 	}
 
-	c.luaState.Field(-1, keycode)
+	r.luaState.Field(-1, keycode)
+
+	// execute functions until we get to the userdata
+	// this makes it possible to wrap events in multiple functions, see lua_runtime.lua
+	for r.luaState.IsFunction(-1) {
+		r.luaState.Call(0, 1)
+	}
 
 	// Userdata -> emit event
-	if cmd, err := c.getTeaCommand(-1); err == nil {
-		return cmd
-	}
-
-	if !c.luaState.IsFunction(-1) {
-		return nil
-	}
-
-	c.luaState.Call(0, 1)
-	cmd, _ := c.getTeaCommand(-1)
+	// anything else -> nil
+	cmd, _ := r.getTeaCommand(-1)
 	return cmd
 }
 
-func (c *Runtime) getTeaCommand(index int) (tea.Cmd, error) {
-	if !c.luaState.IsUserData(index) {
+func (r *Runtime) getTeaCommand(index int) (tea.Cmd, error) {
+	if !r.luaState.IsUserData(index) {
 		return nil, fmt.Errorf("not a userdata at index: %d", index)
 	}
 
-	value := c.luaState.ToUserData(index)
+	value := r.luaState.ToUserData(index)
 	// NOTE: invalid events will be ignored by the event loop, so we don't need to filter
 	return (func() tea.Msg { return value }), nil
+}
+
+func (r *Runtime) PushInputHandle(handle string) {
+	r.inputCallbackStack = append(r.inputCallbackStack, InputCallbackHandle(handle))
+}
+
+func (r *Runtime) HandleInput(input string) tea.Cmd {
+	nHandles := len(r.inputCallbackStack)
+	if nHandles == 0 {
+		return nil
+	}
+
+	callbackHandle := r.inputCallbackStack[nHandles-1]
+	if nHandles == 1 {
+		r.inputCallbackStack = nil
+	} else {
+		r.inputCallbackStack = r.inputCallbackStack[:nHandles-1]
+	}
+
+	r.luaState.PushString(string(callbackHandle))
+	r.luaState.Table(lua.RegistryIndex)
+
+	if r.luaState.TypeOf(-1) == lua.TypeFunction {
+		r.luaState.PushString(input)
+		r.luaState.Call(1, 1)
+		cmd, _ := r.getTeaCommand(-1)
+
+		r.luaState.PushString(string(callbackHandle))
+		r.luaState.PushNil()
+		r.luaState.SetTable(lua.RegistryIndex)
+
+		return cmd
+	}
+
+	return nil
 }
 
 // lua api
@@ -206,20 +252,20 @@ func getMessageField(L *lua.State, index int, field string) (string, bool) {
 }
 
 // put all messages on the stack
-func (c *Runtime) luaMessagesAll(L *lua.State) int {
-	pushMessagesTable(L, c.Messages.GetAll())
+func (r *Runtime) luaMessagesAll(L *lua.State) int {
+	pushMessagesTable(L, r.Messages.GetAll())
 	return 1
 }
 
 // put selected/highligted message on the stack
-func (c *Runtime) luaMessagesSelected(L *lua.State) int {
-	pushMessage(L, c.Messages.GetSelected())
+func (r *Runtime) luaMessagesSelected(L *lua.State) int {
+	pushMessage(L, r.Messages.GetSelected())
 	return 1
 }
 
 // put marked messages on the stack
-func (c *Runtime) luaMessagesMarked(L *lua.State) int {
-	pushMessagesTable(L, c.Messages.GetMarked())
+func (r *Runtime) luaMessagesMarked(L *lua.State) int {
+	pushMessagesTable(L, r.Messages.GetMarked())
 	return 1
 }
 

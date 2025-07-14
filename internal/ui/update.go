@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vrld/ansicht/internal/db"
+	"github.com/vrld/ansicht/internal/model"
 	"github.com/vrld/ansicht/internal/runtime"
 )
 
@@ -45,11 +46,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case runtime.RefreshResultsMsg:
 		return m, m.loadCurrentQuery(m.list.Index())
 
-	// start search
+	// new query
 	case runtime.QueryNewMsg:
-		m.focusSearch = true
-		m.input.Focus()
-		return m, nil
+		m.queries.Add(model.SearchQuery{
+			Query: msg.Query,
+			Name: truncate(msg.Query, 10),
+		})
+		m.queries.SelectLast()
+		return m, m.loadCurrentQuery(0)
 
 	// switch between queries
 	case runtime.QueryNextMsg:
@@ -76,6 +80,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateList(m.list.Index())
 		return m, nil
 
+	// open input
+	case runtime.InputMsg:
+		m.InputHandler.PushInputHandle(msg.Handle)
+		m.focusSearch = true
+		m.input.Placeholder = msg.Placeholder
+		m.input.Focus()
+		return m, nil
+
 	// key presses
 	case tea.KeyMsg:
 		if m.focusSearch {
@@ -83,11 +95,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				var cmd tea.Cmd
 				if query := m.input.Value(); query != "" {
-					m.queries.AddQuery(truncate(query, 16), query)
-					m.queries.SelectLast()
-					cmd = m.loadCurrentQuery(0)
+					cmd = m.InputHandler.HandleInput(query)
 				}
-
 				m.focusSearch = false
 				m.input.Reset()
 				return m, cmd

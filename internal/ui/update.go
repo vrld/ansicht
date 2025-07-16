@@ -85,6 +85,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.InputHandler.PushInputHandle(msg.Handle)
 		m.focusSearch = true
 		m.input.Placeholder = msg.Placeholder
+		m.input.Prompt = msg.Prompt
 		m.input.Focus()
 		return m, nil
 

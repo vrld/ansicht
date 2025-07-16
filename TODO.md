@@ -1,7 +1,5 @@
 # TODO
 
-- Add prompt to input message
-
 - Add input history based on prompt
   - navigate with arrow keys
 

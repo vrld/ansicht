@@ -19,6 +19,7 @@ type MarksClearMsg struct{}
 
 type InputMsg struct {
 	Placeholder string
+	Prompt      string
 	Handle      string
 }
 
@@ -81,6 +82,13 @@ func luaPushInput(L *lua.State, handleId int) int {
 	}
 	placeholder, _ := L.ToString(-1)
 
+	L.Field(1, "prompt")
+	if !(L.IsString(-1) || L.IsNil(-1)) {
+		lua.Errorf(L, "prompt must be a string or nil")
+		panic("unreachable")
+	}
+	prompt, _ := L.ToString(-1)
+
 	handle := fmt.Sprintf("ansicht.input_callback_handle_%d", handleId)
 
 	L.PushString(handle)
@@ -93,6 +101,7 @@ func luaPushInput(L *lua.State, handleId int) int {
 
 	L.PushUserData(InputMsg{
 		Placeholder: placeholder,
+		Prompt:      prompt,
 		Handle:      handle,
 	})
 	return 1

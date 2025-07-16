@@ -17,6 +17,7 @@ key["ctrl+d"] = key.q
 -- create and navigate queries
 key["/"] = event.input {
   placeholder = "tag:unread",
+  prompt = "notmuch search ",
   with_input = event.query.new
 }
 key.left = event.query.prev()
@@ -74,6 +75,7 @@ key.u = tag_selected_messages_event { "+unread" }
 key.x = event.marks.clear
 key.t = event.input {
   placeholder = "-unread +act",
+  prompt = "notmuch tag ",
   with_input = function(tags_str)
     local idx_space = tags_str:find(" ")
     local tags = { tags_str:sub(1, idx_space) }

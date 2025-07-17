@@ -1,9 +1,8 @@
 # TODO
 
-- Add input history based on prompt
-  - navigate with arrow keys
-
 - Add async `spawn` method to execute shell commands in the background
+  - report result (return code, output) as event
+    - will be used later
   - use `spawn` in key.enter binding:
 
         key.enter = function()
@@ -13,6 +12,9 @@
         end
 
 - Tab completion on input
+  - tab completes to the most recent input with the current input as prefix
+
+- Expose history service in runtime
 
 - Investigate the use of the repeated function calling in OnKey:
 

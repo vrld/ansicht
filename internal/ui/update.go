@@ -50,7 +50,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case runtime.QueryNewMsg:
 		m.queries.Add(model.SearchQuery{
 			Query: msg.Query,
-			Name: truncate(msg.Query, 10),
+			Name:  truncate(msg.Query, 10),
 		})
 		m.queries.SelectLast()
 		return m, m.loadCurrentQuery(0)
@@ -96,6 +96,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				var cmd tea.Cmd
 				if query := m.input.Value(); query != "" {
+					m.inputHistory.Add(m.input.Prompt, query)
 					cmd = m.InputHandler.HandleInput(query)
 				}
 				m.focusSearch = false
@@ -104,7 +105,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case "esc":
 				m.focusSearch = false
+				m.inputHistory.Reset(m.input.Prompt)
 				m.input.Reset()
+				return m, nil
+
+			case "up":
+				if err := m.inputHistory.Previous(m.input.Prompt); err == nil {
+					m.input.SetValue(m.inputHistory.Get(m.input.Prompt))
+				}
+				return m, nil
+
+			case "down":
+				if err := m.inputHistory.Next(m.input.Prompt); err == nil {
+					m.input.SetValue(m.inputHistory.Get(m.input.Prompt))
+				}
 				return m, nil
 			}
 		} else {

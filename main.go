@@ -13,6 +13,7 @@ import (
 func main() {
 	messages := service.NewMessages()
 	queries := service.NewQueries()
+	inputHistory := service.NewInputHistory()
 
 	// Load configuration
 	runtime, err := runtime.LoadRuntime()
@@ -22,7 +23,7 @@ func main() {
 	runtime.Messages = messages
 
 	// Initialize UI model
-	model := ui.NewModel(messages, queries)
+	model := ui.NewModel(messages, queries, inputHistory)
 	model.KeyReceiver = runtime
 	model.InputHandler = runtime
 

@@ -30,21 +30,22 @@ type InputHandler interface {
 }
 
 type Model struct {
-	KeyReceiver KeyReceiver
-	messages    *service.Messages
-	queries     *service.Queries
-	isLoading   bool
-	focusSearch bool
+	KeyReceiver  KeyReceiver
+	messages     *service.Messages
+	queries      *service.Queries
+	inputHistory *service.InputHistory
+	isLoading    bool
+	focusSearch  bool
 
-	InputHandler   InputHandler
-	list           list.Model
-	input          textinput.Model
-	spinner        spinner.Model
+	InputHandler InputHandler
+	list         list.Model
+	input        textinput.Model
+	spinner      spinner.Model
 
 	width int
 }
 
-func NewModel(messages *service.Messages, queries *service.Queries) *Model {
+func NewModel(messages *service.Messages, queries *service.Queries, inputHistory *service.InputHistory) *Model {
 	// search box
 	ti := textinput.New()
 	ti.Placeholder = "tag:unread" // TODO: random *valid* query
@@ -75,13 +76,14 @@ func NewModel(messages *service.Messages, queries *service.Queries) *Model {
 	messageList.Styles = listStyles
 
 	return &Model{
-		messages:    messages,
-		queries:     queries,
-		focusSearch: false,
-		input:       ti,
-		list:        messageList,
-		spinner:     sp,
-		width:       defaultWidth,
+		messages:     messages,
+		queries:      queries,
+		inputHistory: inputHistory,
+		focusSearch:  false,
+		input:        ti,
+		list:         messageList,
+		spinner:      sp,
+		width:        defaultWidth,
 	}
 }
 

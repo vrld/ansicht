@@ -6,16 +6,15 @@ import (
 	"github.com/vrld/ansicht/internal/model"
 )
 
-
 type MessageIndex struct {
 	ThreadIdx  int
 	MessageIdx int
 }
 
 type Messages struct {
-	threads []model.Thread
-	messageIndex []MessageIndex
-	selectedIndex int
+	threads        []model.Thread
+	messageIndex   []MessageIndex
+	selectedIndex  int
 	markedMessages map[int]MessageIndex
 }
 
@@ -26,7 +25,7 @@ func NewMessages() *Messages {
 func (m *Messages) SetThreads(threads []model.Thread) {
 	m.ClearMarks()
 	m.threads = threads
-	m.messageIndex = make([]MessageIndex, 0, len(threads) * 2)
+	m.messageIndex = make([]MessageIndex, 0, len(threads)*2)
 	for threadIdx, thread := range m.threads {
 		for msgIdx := range thread.Messages {
 			m.messageIndex = append(m.messageIndex, MessageIndex{threadIdx, msgIdx})

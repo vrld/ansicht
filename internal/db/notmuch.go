@@ -127,7 +127,7 @@ func MessageFlagsFromFilename(filename model.Filename) model.MessageFlags {
 func GetSavedQueries() ([]model.SearchQuery, error) {
 	// config lists did not work out for some reason, i.e., this does *not* work:
 	//     configList, err := db.GetConfigLilst("query")
-  //     for configList.Next(...) {...}
+	//     for configList.Next(...) {...}
 	// Next() always returned false
 	//
 	// So we just parse the config file ourselves.
@@ -150,8 +150,8 @@ func GetSavedQueries() ([]model.SearchQuery, error) {
 	var queries []model.SearchQuery
 	for _, key := range querySection.Keys() {
 		queries = append(queries, model.SearchQuery{
-				Name:  key.Name(),
-				Query: key.Value(),
+			Name:  key.Name(),
+			Query: key.Value(),
 		})
 	}
 

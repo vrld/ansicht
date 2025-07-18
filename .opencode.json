@@ -1,0 +1,6 @@
+{
+  "lsp": {
+    "disabled": false,
+    "command": "gopls"
+  }
+}

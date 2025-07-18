@@ -20,6 +20,7 @@ type Runtime struct {
 	luaState           *lua.State
 	Messages           *service.Messages
 	inputCallbackStack []InputCallbackHandle
+	program            *tea.Program
 }
 
 //go:embed default_config.lua
@@ -58,6 +59,9 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 	// Create key table
 	L.NewTable()
 	L.SetGlobal("key")
+
+	L.PushGoFunction(runtime.luaSpawn)
+	L.SetGlobal("spawn")
 
 	// Register tag function globally
 	lua.NewLibrary(L, []lua.RegistryFunction{
@@ -132,12 +136,6 @@ func (r *Runtime) OnKey(keycode string) tea.Cmd {
 
 	r.luaState.Field(-1, keycode)
 
-	// execute functions until we get to the userdata
-	// this makes it possible to wrap events in multiple functions, see lua_runtime.lua
-	for r.luaState.IsFunction(-1) {
-		r.luaState.Call(0, 1)
-	}
-
 	// Userdata -> emit event
 	// anything else -> nil
 	cmd, _ := r.getTeaCommand(-1)
@@ -145,48 +143,38 @@ func (r *Runtime) OnKey(keycode string) tea.Cmd {
 }
 
 func (r *Runtime) getTeaCommand(index int) (tea.Cmd, error) {
-	if !r.luaState.IsUserData(index) {
-		return nil, fmt.Errorf("not a userdata at index: %d", index)
+	// execute functions until we get to the userdata
+	// this makes it possible to wrap events in multiple functions, see lua_runtime.lua
+	for r.luaState.IsFunction(-1) {
+		r.luaState.Call(0, 1)
 	}
 
-	value := r.luaState.ToUserData(index)
-	// NOTE: invalid events will be ignored by the event loop, so we don't need to filter
-	return (func() tea.Msg { return value }), nil
-}
+	// userdata => command
+	if r.luaState.IsUserData(index) {
+		value := r.luaState.ToUserData(index)
 
-func (r *Runtime) PushInputHandle(handle string) {
-	r.inputCallbackStack = append(r.inputCallbackStack, InputCallbackHandle(handle))
-}
-
-func (r *Runtime) HandleInput(input string) tea.Cmd {
-	nHandles := len(r.inputCallbackStack)
-	if nHandles == 0 {
-		return nil
+		// NOTE: invalid events will be ignored by the event loop, so we don't need to filter
+		return (func() tea.Msg { return value }), nil
 	}
 
-	callbackHandle := r.inputCallbackStack[nHandles-1]
-	if nHandles == 1 {
-		r.inputCallbackStack = nil
-	} else {
-		r.inputCallbackStack = r.inputCallbackStack[:nHandles-1]
+	// table of events => batch of commandss
+	if r.luaState.IsTable(index) {
+		var cmds []tea.Cmd
+		count := r.luaState.RawLength(index)
+		for i := 1; i <= count; i++ {
+			r.luaState.RawGetInt(index, i)
+			if cmd, err := r.getTeaCommand(-1); err == nil && cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			r.luaState.Pop(1)
+		}
+
+		if len(cmds) > 0 {
+			return tea.Batch(cmds...), nil
+		}
 	}
 
-	r.luaState.PushString(string(callbackHandle))
-	r.luaState.Table(lua.RegistryIndex)
-
-	if r.luaState.TypeOf(-1) == lua.TypeFunction {
-		r.luaState.PushString(input)
-		r.luaState.Call(1, 1)
-		cmd, _ := r.getTeaCommand(-1)
-
-		r.luaState.PushString(string(callbackHandle))
-		r.luaState.PushNil()
-		r.luaState.SetTable(lua.RegistryIndex)
-
-		return cmd
-	}
-
-	return nil
+	return nil, fmt.Errorf("not a userdata or table at index: %d", index)
 }
 
 // lua api

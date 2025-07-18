@@ -5,9 +5,8 @@ import (
 	"github.com/vrld/ansicht/internal/model"
 )
 
-
 type Queries struct {
-	queries           []model.SearchQuery
+	queries       []model.SearchQuery
 	selectedIndex int
 }
 
@@ -20,7 +19,7 @@ func NewQueries() *Queries {
 	}
 
 	return &Queries{
-		queries: queries,
+		queries:       queries,
 		selectedIndex: 0,
 	}
 }

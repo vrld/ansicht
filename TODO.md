@@ -1,15 +1,18 @@
 # TODO
 
-- Add async `spawn` method to execute shell commands in the background
-  - report result (return code, output) as event
-    - will be used later
-  - use `spawn` in key.enter binding:
+- Tweak UI Layout:
+  > {query} {%d marked}/{%d total}
+  > {list of messages}
+  > {query tabs}
+  > {input line}
 
-        key.enter = function()
-          local message = messages.selected()
-          spawn("einsicht", message.filename)
-          notmuch.tag(message, "-unread")
-        end
+- Add notifications in UI
+  - show as floating windows in the upper right corner
+  - expire after a timeout
+  - have levels with different styling and timeout
+  - exposed to lua runtime as events
+
+- Add logging service
 
 - Tab completion on input
   - tab completes to the most recent input with the current input as prefix
@@ -29,12 +32,6 @@
 - Add error event
 
       key.e = event.error("test error")
-
-- Tweak UI Layout:
-  > {query} {%d marked}/{%d total}
-  > {list of messages}
-  > {query tabs}
-  > {input line}
 
 - change list component:
   - expose movement to runtime as events

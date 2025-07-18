@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/vrld/ansicht/internal/model"
+	"github.com/vrld/ansicht/internal/runtime"
 	"github.com/vrld/ansicht/internal/service"
 )
 
@@ -29,6 +30,10 @@ type InputHandler interface {
 	HandleInput(input string) tea.Cmd
 }
 
+type SpawnHandler interface {
+	HandleSpawnResult(msg runtime.SpawnResultMsg) tea.Cmd
+}
+
 type Model struct {
 	KeyReceiver  KeyReceiver
 	messages     *service.Messages
@@ -38,6 +43,7 @@ type Model struct {
 	focusSearch  bool
 
 	InputHandler InputHandler
+	SpawnHandler SpawnHandler
 	list         list.Model
 	input        textinput.Model
 	spinner      spinner.Model

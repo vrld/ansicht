@@ -26,9 +26,11 @@ func main() {
 	model := ui.NewModel(messages, queries, inputHistory)
 	model.KeyReceiver = runtime
 	model.InputHandler = runtime
+	model.SpawnHandler = runtime
 
 	// Start the application
 	p := tea.NewProgram(model, tea.WithAltScreen())
+	runtime.SetProgram(p)
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error running the program: %v", err)
 	}

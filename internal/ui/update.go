@@ -89,6 +89,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.input.Focus()
 		return m, nil
 
+	// spawn command completed
+	case runtime.SpawnResultMsg:
+		if m.SpawnHandler != nil {
+			return m, m.SpawnHandler.HandleSpawnResult(msg)
+		}
+		return m, nil
+
 	// key presses
 	case tea.KeyMsg:
 		if m.focusSearch {

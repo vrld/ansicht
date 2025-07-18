@@ -3,6 +3,7 @@ local key = key
 local event = event
 local messages = messages
 local notmuch = notmuch
+local spawn = spawn
 
 -- map keys to events
 -- events are available through the key table
@@ -29,19 +30,14 @@ key.i = event.marks.invert()
 
 key.enter = function()
   local message = messages.selected() -- this gives the currently highlighted/selected message
-  -- TODO: async 'spawn(command, arg, arg, arg)'
-  local command = table.concat {
+  spawn{
     "/home/matthias/Projekte/übersicht.mail/einsicht/build/bin/einsicht",
-    " ",
     message.filename,
-    ">/dev/null",
-    " ",
-    "2>&1"
+    next=function()
+      notmuch.tag(message, "-unread")
+      return event.refresh { message }
+    end
   }
-  if pcall(os.execute, command) then
-    notmuch.tag(message, "-unread")
-  end
-  return event.refresh { message }
 end
 
 -- wrapper function that returns a function that tags selected messages

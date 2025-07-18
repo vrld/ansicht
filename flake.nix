@@ -33,7 +33,7 @@
         buildInputs = with pkgs; [
           go
           notmuch
-          # uncomment when needed
+          gopls
           go-tools         # linter (`staticcheck`)
           delve            # debugger
           gdlv             # GUI for delve

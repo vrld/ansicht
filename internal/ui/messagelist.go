@@ -39,12 +39,14 @@ type MessageDelegate struct {
 		Dim      lipgloss.Style
 	}
 	width int
+	cache map[string]string // Simple cache for rendered lines
 }
 
 // NewMessageDelegate creates a new delegate for rendering messages
 func NewMessageDelegate(width int) MessageDelegate {
 	d := MessageDelegate{
 		width: width,
+		cache: make(map[string]string),
 	}
 
 	// Set up styles for different states
@@ -74,43 +76,70 @@ func (d MessageDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 		return
 	}
 
-	// Choose style based on selection state
-	style := d.styles.Normal
+	// Choose styles based on read state and selection
+	dateStyle := styleMsgDateUnread
+	senderStyle := styleMsgSenderUnread
+	arrowStyle := styleMsgArrowUnread
+	recipientStyle := styleMsgRecipientUnread
+	subjectStyle := styleMsgSubjectUnread
+	tagsStyle := styleMsgTagsUnread
+
+	if item.Message.Flags.Seen {
+		// Read messages use dimmed colors
+		dateStyle = styleMsgDateRead
+		senderStyle = styleMsgSenderRead
+		arrowStyle = styleMsgArrowRead
+		recipientStyle = styleMsgRecipientRead
+		subjectStyle = styleMsgSubjectRead
+		tagsStyle = styleMsgTagsRead
+	}
+
 	if index == m.Index() {
-		style = d.styles.Selected
+		// Selected items use selection background
+		bg := d.styles.Selected.GetBackground()
+		fg := d.styles.Selected.GetForeground()
+		dateStyle = dateStyle.Background(bg).Foreground(fg)
+		senderStyle = senderStyle.Background(bg).Foreground(fg)
+		arrowStyle = arrowStyle.Background(bg).Foreground(fg)
+		recipientStyle = recipientStyle.Background(bg).Foreground(fg)
+		subjectStyle = subjectStyle.Background(bg).Foreground(fg)
+		tagsStyle = tagsStyle.Background(bg).Foreground(fg)
 	} else if item.Marked {
-		style = d.styles.Marked
+		// Marked items use marked background
+		bg := d.styles.Marked.GetBackground()
+		fg := d.styles.Marked.GetForeground()
+		dateStyle = dateStyle.Background(bg).Foreground(fg)
+		senderStyle = senderStyle.Background(bg).Foreground(fg)
+		arrowStyle = arrowStyle.Background(bg).Foreground(fg)
+		recipientStyle = recipientStyle.Background(bg).Foreground(fg)
+		subjectStyle = subjectStyle.Background(bg).Foreground(fg)
+		tagsStyle = tagsStyle.Background(bg).Foreground(fg)
 	}
 
-	// Calculate widths for each column based on total width
-	totalWidth := d.width
-	dateWidth := 10
-	flagsWidth := 7
-	fromWidth := int(float64(totalWidth) * 0.2)
-	tagsWidth := int(float64(totalWidth) * 0.15)
-	subjectWidth := totalWidth - dateWidth - flagsWidth - fromWidth - tagsWidth - 5 // 5 for spacing
+	line := d.renderLine(item, dateStyle, senderStyle, arrowStyle, recipientStyle, subjectStyle, tagsStyle)
 
-	// Truncate and format each field
-	date := formatDate(item.Message.Date)
-	flags := flagsToString(item.Message.Flags)
-	if item.Marked {
-		flags += "•"
-	} else {
-		flags += " "
-	}
-	from := truncate(item.Message.From, fromWidth)
-	subject := truncate(item.Message.Subject, subjectWidth)
-	tags := truncate(formatTags(item.Message.Tags), tagsWidth)
+	fmt.Fprint(w, line)
+}
 
-	// Format the message line
-	str := fmt.Sprintf("%s %s %-*s %-*s %-*s",
-		date,
-		flags,
-		fromWidth, from,
-		subjectWidth, subject,
-		tagsWidth, tags)
+func (d MessageDelegate) renderLine(item MessageItem, dateStyle, senderStyle, arrowStyle, recipientStyle, subjectStyle, tagsStyle lipgloss.Style) string {
+	date := fmt.Sprintf("%12s  ", formatDate(item.Message.Date))
+	sender := truncate(item.Message.From, 20) // TODO: use only name (Sander <s@nd.er> => Sander)
+	arrow := "→"
+	recipient := truncate(item.Message.To, 20)
+	tags := "  " + formatTags(item.Message.Tags) // TODO: replace tags (configurable)
 
-	fmt.Fprint(w, style.Render(str))
+	// Calculate remaining width for subject
+	componentWidth := len(date) + len(sender) + len(arrow) + len(recipient) + len(tags)
+	remainingWidth := max(d.width-componentWidth, 15)
+	subject := truncate("  "+cleanSubject(item.Message.Subject), remainingWidth)
+
+	return fmt.Sprintf("%s%s%s%s%s%s",
+		dateStyle.Render(date),
+		senderStyle.Render(sender),
+		arrowStyle.Render(arrow),
+		recipientStyle.Render(recipient),
+		subjectStyle.Render(subject),
+		tagsStyle.Render(tags))
 }
 
 func CreateMessageItems(messages *service.Messages) []list.Item {

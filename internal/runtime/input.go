@@ -13,7 +13,6 @@ type InputMsg struct {
 	Handle      string
 }
 
-
 // event.input{ placeholder = 'string', with_input = function(input) return event end}
 func luaPushInput(L *lua.State, handleId int) int {
 	if L.Top() < 1 || !L.IsTable(1) {

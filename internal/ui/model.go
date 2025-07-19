@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -48,7 +49,8 @@ type Model struct {
 	input        textinput.Model
 	spinner      spinner.Model
 
-	width int
+	width      int
+	bottomLine string
 }
 
 func NewModel(messages *service.Messages, queries *service.Queries, inputHistory *service.InputHistory) *Model {
@@ -90,7 +92,34 @@ func NewModel(messages *service.Messages, queries *service.Queries, inputHistory
 		list:         messageList,
 		spinner:      sp,
 		width:        defaultWidth,
+		bottomLine:   "",
 	}
+}
+
+func (m Model) renderStatusLine() string {
+	var leftStatus, rightStatus string
+
+	if query, ok := m.queries.Current(); ok {
+		markedCount := m.messages.MarkedCount()
+		totalCount := m.messages.Count()
+		currentPos := m.list.Index() + 1
+
+		leftStatus = fmt.Sprintf("%s | %d/%d | %d marked", query.Query, currentPos, totalCount, markedCount)
+	} else {
+		leftStatus = "No query selected"
+	}
+
+	// Add current time on the right
+	rightStatus = time.Now().Format("15:04")
+
+	// Calculate spacing to right-align the time
+	spacing := max(m.width-2-2-len(leftStatus)-len(rightStatus), 1)
+
+	statusText := "👀 " + leftStatus + strings.Repeat(" ", spacing) + rightStatus
+	statusLine := styleStatusLine.Render(statusText)
+	border := styleStatusBorder.Render(strings.Repeat("🬂", m.width))
+
+	return statusLine + "\n" + border
 }
 
 func (m Model) renderTabs() string {
@@ -108,10 +137,10 @@ func (m Model) renderTabs() string {
 }
 
 func (m Model) View() string {
+	statusLine := m.renderStatusLine()
 	tabs := m.renderTabs()
 
-	// Build the status line with selection count if needed
-	bottom_line := "Press / to search, ←/→ to switch tabs, <space> to select, I to invert selection, q to quit"
+	bottom_line := m.bottomLine
 
 	if m.isLoading {
 		bottom_line = fmt.Sprintf("%s Searching...", m.spinner.View())
@@ -122,7 +151,8 @@ func (m Model) View() string {
 	}
 
 	return fmt.Sprintf(
-		"%s\n%s\n%s",
+		"%s\n%s\n%s\n%s",
+		statusLine,
 		m.list.View(),
 		tabs,
 		bottom_line,

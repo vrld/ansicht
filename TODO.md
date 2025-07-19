@@ -1,10 +1,14 @@
 # TODO
 
-- Tweak UI Layout:
-  > {query} {%d marked}/{%d total}
-  > {list of messages}
-  > {query tabs}
-  > {input line}
+- Expose Model.bottmLine in lua runtime
+  - status.set("Message")
+  - message = status.set()
+  - decouple Runtime from Model with interfaces
+
+- Make colors configurable in runtime
+  - colors.bg = 235
+  - colors.error = 196
+  - decouple Runtime from Model with interfaces
 
 - Add notifications in UI
   - show as floating windows in the upper right corner

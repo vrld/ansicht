@@ -131,3 +131,7 @@ func (m *Messages) GetMarked() []*model.Message {
 
 	return selected
 }
+
+func (m *Messages) MarkedCount() int {
+	return len(m.markedMessages)
+}

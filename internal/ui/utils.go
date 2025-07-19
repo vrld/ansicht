@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -9,9 +10,38 @@ import (
 
 func formatDate(date time.Time) string {
 	now := time.Now()
+	diff := now.Sub(date)
+
+	// Less than 1 hour
+	if diff < time.Hour {
+		minutes := int(diff.Minutes())
+		if minutes < 1 {
+			return "now"
+		}
+		return fmt.Sprintf("%dm ago", minutes)
+	}
+
+	// Less than 24 hours
+	if diff < 24*time.Hour {
+		hours := int(diff.Hours())
+		return fmt.Sprintf("%dh ago", hours)
+	}
+
+	// Less than 7 days
+	if diff < 7*24*time.Hour {
+		days := int(diff.Hours() / 24)
+		if days == 1 {
+			return "yesterday"
+		}
+		return fmt.Sprintf("%dd ago", days)
+	}
+
+	// Same year
 	if date.Year() == now.Year() {
 		return date.Format("Jan 2")
 	}
+
+	// Different year
 	return date.Format("2006-01-02")
 }
 
@@ -30,44 +60,17 @@ func truncate(s string, maxLen int) string {
 	return s[:maxLen-1] + "…"
 }
 
-func flagsToString(flags model.MessageFlags) string {
-	var flagStr strings.Builder
+// cleanSubject removes leading/trailing whitespace and newlines from subject
+func cleanSubject(subject string) string {
+	// Replace newlines and tabs with spaces, then trim
+	cleaned := strings.ReplaceAll(subject, "\n", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\t", " ")
+	cleaned = strings.TrimSpace(cleaned)
 
-	if flags.Draft {
-		flagStr.WriteString("D")
-	} else {
-		flagStr.WriteString(" ")
+	// Collapse multiple spaces into single spaces
+	for strings.Contains(cleaned, "  ") {
+		cleaned = strings.ReplaceAll(cleaned, "  ", " ")
 	}
 
-	if flags.Flagged {
-		flagStr.WriteString("F")
-	} else {
-		flagStr.WriteString(" ")
-	}
-
-	//if flags.Passed {
-	//	flagStr.WriteString("P")
-	//} else {
-	//	flagStr.WriteString(" ")
-	//}
-
-	if flags.Replied {
-		flagStr.WriteString("R")
-	} else {
-		flagStr.WriteString(" ")
-	}
-
-	if !flags.Seen {
-		flagStr.WriteString("N")
-	} else {
-		flagStr.WriteString(" ")
-	}
-
-	//if flags.Trashed {
-	//	flagStr.WriteString("T")
-	//} else {
-	//	flagStr.WriteString(" ")
-	//}
-
-	return flagStr.String()
+	return cleaned
 }

@@ -29,7 +29,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 
 		// Update list height and width
-		listHeight := msg.Height - 6 // Allow for borders, margin, and tabs
+		// Account for: status line (1) + status border (1) + tabs (1) + bottom line (1) + margins (2)
+		listHeight := msg.Height - 6
 		m.list.SetHeight(listHeight)
 		m.list.SetWidth(msg.Width)
 

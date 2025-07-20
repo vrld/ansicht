@@ -19,6 +19,7 @@ type InputCallbackHandle string
 type Runtime struct {
 	luaState           *lua.State
 	Messages           *service.Messages
+	Status             *service.Status
 	inputCallbackStack []InputCallbackHandle
 	program            *tea.Program
 }
@@ -84,6 +85,7 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 		{Name: "input", Function: func(L *lua.State) int {
 			return luaPushInput(L, len(runtime.inputCallbackStack))
 		}},
+		{Name: "status", Function: luaPushStatusSet},
 	})
 
 	// query subgroup
@@ -103,6 +105,12 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 	L.SetField(-2, "marks")
 
 	L.SetGlobal("event")
+
+	// status functions
+	lua.NewLibrary(L, []lua.RegistryFunction{
+		{Name: "get", Function: runtime.luaStatusGet},
+	})
+	L.SetGlobal("status")
 
 	if err := lua.DoString(L, luaRuntime); err != nil {
 		panic(err)
@@ -311,4 +319,10 @@ func isMessage(L *lua.State, index int) bool {
 	}
 
 	return false
+}
+
+// returns the current status message
+func (r *Runtime) luaStatusGet(L *lua.State) int {
+	L.PushString(r.Status.Get())
+	return 1
 }

@@ -4,6 +4,7 @@ local event = event
 local messages = messages
 local notmuch = notmuch
 local spawn = spawn
+local status = status
 
 -- map keys to events
 -- events are available through the key table
@@ -83,3 +84,8 @@ key.t = event.input {
     return tag_selected_messages(tags)
   end,
 }
+
+-- test status functionality
+key.s = function()
+  return event.status("Hello from Lua! Current status: " .. status.get())
+end

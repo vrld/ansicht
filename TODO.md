@@ -1,10 +1,5 @@
 # TODO
 
-- Expose Model.bottmLine in lua runtime
-  - status.set("Message")
-  - message = status.set()
-  - decouple Runtime from Model with interfaces
-
 - Make colors configurable in runtime
   - colors.bg = 235
   - colors.error = 196
@@ -14,7 +9,7 @@
   - show as floating windows in the upper right corner
   - expire after a timeout
   - have levels with different styling and timeout
-  - exposed to lua runtime as events
+  - uses/extends existing Status service
 
 - Add logging service
 

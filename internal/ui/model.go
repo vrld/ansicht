@@ -37,9 +37,10 @@ type SpawnHandler interface {
 
 type Model struct {
 	KeyReceiver  KeyReceiver
-	messages     *service.Messages
-	queries      *service.Queries
-	inputHistory *service.InputHistory
+	Messages     *service.Messages
+	Queries      *service.Queries
+	InputHistory *service.InputHistory
+	Status       *service.Status
 	isLoading    bool
 	focusSearch  bool
 
@@ -49,11 +50,10 @@ type Model struct {
 	input        textinput.Model
 	spinner      spinner.Model
 
-	width      int
-	bottomLine string
+	width int
 }
 
-func NewModel(messages *service.Messages, queries *service.Queries, inputHistory *service.InputHistory) *Model {
+func NewModel() *Model {
 	// search box
 	ti := textinput.New()
 	ti.Placeholder = "tag:unread" // TODO: random *valid* query
@@ -84,24 +84,20 @@ func NewModel(messages *service.Messages, queries *service.Queries, inputHistory
 	messageList.Styles = listStyles
 
 	return &Model{
-		messages:     messages,
-		queries:      queries,
-		inputHistory: inputHistory,
 		focusSearch:  false,
 		input:        ti,
 		list:         messageList,
 		spinner:      sp,
 		width:        defaultWidth,
-		bottomLine:   "",
 	}
 }
 
 func (m Model) renderStatusLine() string {
 	var leftStatus, rightStatus string
 
-	if query, ok := m.queries.Current(); ok {
-		markedCount := m.messages.MarkedCount()
-		totalCount := m.messages.Count()
+	if query, ok := m.Queries.Current(); ok {
+		markedCount := m.Messages.MarkedCount()
+		totalCount := m.Messages.Count()
 		currentPos := m.list.Index() + 1
 
 		leftStatus = fmt.Sprintf("%s | %d/%d | %d marked", query.Query, currentPos, totalCount, markedCount)
@@ -124,9 +120,9 @@ func (m Model) renderStatusLine() string {
 
 func (m Model) renderTabs() string {
 	var tabs []string
-	for i, query := range m.queries.All() {
+	for i, query := range m.Queries.All() {
 		style := styleTabNormal
-		if i == m.queries.SelectedIndex() {
+		if i == m.Queries.SelectedIndex() {
 			style = styleTabActive
 		}
 		tabs = append(tabs, style.Render(query.Name))
@@ -140,7 +136,7 @@ func (m Model) View() string {
 	statusLine := m.renderStatusLine()
 	tabs := m.renderTabs()
 
-	bottom_line := m.bottomLine
+	bottom_line := m.Status.Get()
 
 	if m.isLoading {
 		bottom_line = fmt.Sprintf("%s Searching...", m.spinner.View())

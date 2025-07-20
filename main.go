@@ -14,6 +14,7 @@ func main() {
 	messages := service.NewMessages()
 	queries := service.NewQueries()
 	inputHistory := service.NewInputHistory()
+	status := service.NewStatus()
 
 	// Load configuration
 	runtime, err := runtime.LoadRuntime()
@@ -21,9 +22,14 @@ func main() {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
 	runtime.Messages = messages
+	runtime.Status = status
 
 	// Initialize UI model
-	model := ui.NewModel(messages, queries, inputHistory)
+	model := ui.NewModel()
+	model.Messages = messages
+	model.Queries = queries
+	model.InputHistory = inputHistory
+	model.Status = status
 	model.KeyReceiver = runtime
 	model.InputHandler = runtime
 	model.SpawnHandler = runtime

@@ -14,6 +14,9 @@ type QueryPrevMsg struct{}
 type MarksToggleMsg struct{}
 type MarksInvertMsg struct{}
 type MarksClearMsg struct{}
+type StatusSetMsg struct {
+	Message string
+}
 
 func luaPushRefresh(L *lua.State) int {
 	L.PushUserData(RefreshResultsMsg{})
@@ -57,5 +60,15 @@ func luaPushMarksInvert(L *lua.State) int {
 
 func luaPushMarksClear(L *lua.State) int {
 	L.PushUserData(MarksClearMsg{})
+	return 1
+}
+
+func luaPushStatusSet(L *lua.State) int {
+	if L.Top() < 1 || !L.IsString(1) {
+		lua.Errorf(L, "missing string argument")
+		panic("unreachable")
+	}
+	message, _ := L.ToString(1)
+	L.PushUserData(StatusSetMsg{Message: message})
 	return 1
 }

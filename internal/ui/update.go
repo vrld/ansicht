@@ -21,7 +21,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// TODO: Show error in UI
 			return m, nil
 		}
-		m.messages.SetThreads(msg.Result.Threads)
+		m.Messages.SetThreads(msg.Result.Threads)
 		m.updateList(msg.RowToSelect)
 		return m, nil
 
@@ -49,35 +49,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// new query
 	case runtime.QueryNewMsg:
-		m.queries.Add(model.SearchQuery{
+		m.Queries.Add(model.SearchQuery{
 			Query: msg.Query,
 			Name:  truncate(msg.Query, 10),
 		})
-		m.queries.SelectLast()
+		m.Queries.SelectLast()
 		return m, m.loadCurrentQuery(0)
 
 	// switch between queries
 	case runtime.QueryNextMsg:
-		m.queries.SelectNext()
+		m.Queries.SelectNext()
 		return m, m.loadCurrentQuery(0)
 
 	case runtime.QueryPrevMsg:
-		m.queries.SelectPrevious()
+		m.Queries.SelectPrevious()
 		return m, m.loadCurrentQuery(0)
 
 	// item selection
 	case runtime.MarksToggleMsg:
-		m.messages.ToggleMark(m.list.Index())
+		m.Messages.ToggleMark(m.list.Index())
 		m.updateList(m.list.Index())
 		return m, nil
 
 	case runtime.MarksInvertMsg:
-		m.messages.InvertMarks()
+		m.Messages.InvertMarks()
 		m.updateList(m.list.Index())
 		return m, nil
 
 	case runtime.MarksClearMsg:
-		m.messages.ClearMarks()
+		m.Messages.ClearMarks()
 		m.updateList(m.list.Index())
 		return m, nil
 
@@ -97,6 +97,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	// status message set
+	case runtime.StatusSetMsg:
+		m.Status.Set(msg.Message)
+		return m, nil
+
 	// key presses
 	case tea.KeyMsg:
 		if m.focusSearch {
@@ -104,7 +109,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				var cmd tea.Cmd
 				if query := m.input.Value(); query != "" {
-					m.inputHistory.Add(m.input.Prompt, query)
+					m.InputHistory.Add(m.input.Prompt, query)
 					cmd = m.InputHandler.HandleInput(query)
 				}
 				m.focusSearch = false
@@ -113,24 +118,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case "esc":
 				m.focusSearch = false
-				m.inputHistory.Reset(m.input.Prompt)
+				m.InputHistory.Reset(m.input.Prompt)
 				m.input.Reset()
 				return m, nil
 
 			case "up":
-				if err := m.inputHistory.Previous(m.input.Prompt); err == nil {
-					m.input.SetValue(m.inputHistory.Get(m.input.Prompt))
+				if err := m.InputHistory.Previous(m.input.Prompt); err == nil {
+					m.input.SetValue(m.InputHistory.Get(m.input.Prompt))
 				}
 				return m, nil
 
 			case "down":
-				if err := m.inputHistory.Next(m.input.Prompt); err == nil {
-					m.input.SetValue(m.inputHistory.Get(m.input.Prompt))
+				if err := m.InputHistory.Next(m.input.Prompt); err == nil {
+					m.input.SetValue(m.InputHistory.Get(m.input.Prompt))
 				}
 				return m, nil
 			}
 		} else {
-			m.messages.Select(m.list.Index())
+			m.Messages.Select(m.list.Index())
 			if cmd := m.KeyReceiver.OnKey(msg.String()); cmd != nil {
 				return m, cmd
 			}
@@ -159,7 +164,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) searchCurrentQuery(rowToSelect int) tea.Cmd {
 	return func() tea.Msg {
-		if query, ok := m.queries.Current(); ok {
+		if query, ok := m.Queries.Current(); ok {
 			result, err := db.FindThreads(&query)
 			return SearchResultMsg{Result: result, Error: err, RowToSelect: rowToSelect}
 		}
@@ -174,9 +179,9 @@ func (m *Model) loadCurrentQuery(rowToSelect int) tea.Cmd {
 }
 
 func (m *Model) updateList(toSelect int) {
-	items := CreateMessageItems(m.messages)
+	items := CreateMessageItems(m.Messages)
 
 	m.list.SetItems(items)
 	m.list.Select(toSelect)
-	m.messages.Select(toSelect)
+	m.Messages.Select(toSelect)
 }

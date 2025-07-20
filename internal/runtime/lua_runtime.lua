@@ -7,7 +7,7 @@ local event = event
 -- that we need a fresh event on every key press, otherwise the
 -- callback will only be executed on the first invocation.
 -- OnKey will execute functions until it reaches the userdata
-event.input_raw = event.input
+local event_inupt = event.input
 event.input = function(config)
-  return function() return event.input_raw(config) end
+  return function() return event_input(config) end
 end

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/vrld/ansicht/internal/model"
 )
 
 func formatDate(date time.Time) string {

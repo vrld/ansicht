@@ -27,8 +27,13 @@ func (m *Messages) SetThreads(threads []model.Thread) {
 	m.threads = threads
 	m.messageIndex = make([]MessageIndex, 0, len(threads)*2)
 	for threadIdx, thread := range m.threads {
+		// newest messages first
+		messageCount := len(thread.Messages)
 		for msgIdx := range thread.Messages {
-			m.messageIndex = append(m.messageIndex, MessageIndex{threadIdx, msgIdx})
+			m.messageIndex = append(m.messageIndex, MessageIndex{
+				threadIdx,
+				messageCount - msgIdx - 1,
+			})
 		}
 	}
 }

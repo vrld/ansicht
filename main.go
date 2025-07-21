@@ -30,13 +30,11 @@ func main() {
 	model.Queries = queries
 	model.InputHistory = inputHistory
 	model.Status = status
-	model.KeyReceiver = runtime
-	model.InputHandler = runtime
-	model.SpawnHandler = runtime
+	model.Runtime = runtime
 
 	// Start the application
 	p := tea.NewProgram(model, tea.WithAltScreen())
-	runtime.SetProgram(p)
+	runtime.SendMessage = p.Send
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error running the program: %v", err)
 	}

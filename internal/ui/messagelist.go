@@ -32,29 +32,12 @@ func (i MessageItem) FilterValue() string {
 
 // MessageDelegate is a custom delegate for rendering message items
 type MessageDelegate struct {
-	styles struct {
-		Normal   lipgloss.Style
-		Selected lipgloss.Style
-		Marked   lipgloss.Style
-		Dim      lipgloss.Style
-	}
 	width int
-	cache map[string]string // Simple cache for rendered lines
 }
 
 // NewMessageDelegate creates a new delegate for rendering messages
 func NewMessageDelegate(width int) MessageDelegate {
-	d := MessageDelegate{
-		width: width,
-		cache: make(map[string]string),
-	}
-
-	// Set up styles for different states
-	d.styles.Normal = styleMessageNormal.Width(width)
-	d.styles.Selected = styleMessageSelected.Width(width)
-	d.styles.Marked = styleMessageMarked.Width(width)
-	d.styles.Dim = styleMessageDim.Width(width)
-
+	d := MessageDelegate{ width: width }
 	return d
 }
 
@@ -95,9 +78,8 @@ func (d MessageDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 	}
 
 	if index == m.Index() {
-		// Selected items use selection background
-		bg := d.styles.Selected.GetBackground()
-		fg := d.styles.Selected.GetForeground()
+		bg := lipgloss.Color(colorSelectedBackground)
+		fg := lipgloss.Color(colorSelectedForeground)
 		dateStyle = dateStyle.Background(bg).Foreground(fg)
 		senderStyle = senderStyle.Background(bg).Foreground(fg)
 		arrowStyle = arrowStyle.Background(bg).Foreground(fg)
@@ -105,9 +87,8 @@ func (d MessageDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 		subjectStyle = subjectStyle.Background(bg).Foreground(fg)
 		tagsStyle = tagsStyle.Background(bg).Foreground(fg)
 	} else if item.Marked {
-		// Marked items use marked background
-		bg := d.styles.Marked.GetBackground()
-		fg := d.styles.Marked.GetForeground()
+		bg := lipgloss.Color(colorMarkedBackground)
+		fg := lipgloss.Color(colorMarkedForeground)
 		dateStyle = dateStyle.Background(bg).Foreground(fg)
 		senderStyle = senderStyle.Background(bg).Foreground(fg)
 		arrowStyle = arrowStyle.Background(bg).Foreground(fg)
@@ -122,24 +103,26 @@ func (d MessageDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 }
 
 func (d MessageDelegate) renderLine(item MessageItem, dateStyle, senderStyle, arrowStyle, recipientStyle, subjectStyle, tagsStyle lipgloss.Style) string {
-	date := fmt.Sprintf("%12s  ", formatDate(item.Message.Date))
-	sender := truncate(item.Message.From, 20) // TODO: use only name (Sander <s@nd.er> => Sander)
-	arrow := "→"
-	recipient := truncate(item.Message.To, 20)
+	date := fmt.Sprintf("%11s  ", formatDate(item.Message.Date))
+	sender := fmt.Sprintf("%20s", truncate(formatEmailAddress(item.Message.From), 20)) // TODO: use only name (Sander <s@nd.er> => Sander)
+	arrow := " → "
+	recipient := fmt.Sprintf("%-20s", truncate(formatEmailAddress(item.Message.To), 20))
 	tags := "  " + formatTags(item.Message.Tags) // TODO: replace tags (configurable)
 
 	// Calculate remaining width for subject
 	componentWidth := len(date) + len(sender) + len(arrow) + len(recipient) + len(tags)
-	remainingWidth := max(d.width-componentWidth, 15)
+	remainingWidth := max(1, d.width - componentWidth)
 	subject := truncate("  "+cleanSubject(item.Message.Subject), remainingWidth)
 
-	return fmt.Sprintf("%s%s%s%s%s%s",
+	filler := strings.Repeat(" ", d.width)
+
+	return fmt.Sprintf("%1s%s%s%s%s%s",
 		dateStyle.Render(date),
 		senderStyle.Render(sender),
 		arrowStyle.Render(arrow),
 		recipientStyle.Render(recipient),
 		subjectStyle.Render(subject),
-		tagsStyle.Render(tags))
+		tagsStyle.Render(tags + filler))
 }
 
 func CreateMessageItems(messages *service.Messages) []list.Item {

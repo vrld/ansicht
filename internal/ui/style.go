@@ -5,21 +5,23 @@ import "github.com/charmbracelet/lipgloss"
 // Coherent color palette
 const (
 	// Base colors
-	colorBackground = "235" // Dark gray
-	colorForeground = "252" // Light gray
-	colorAccent     = "108" // Green
-	colorWarning    = "214" // Orange
-	colorError      = "196" // Red
-	colorMuted      = "240" // Dim gray
-	colorHighlight  = "229" // Bright yellow
-	colorInfo       = "117" // Light blue
+	colorBackground = "0"
+	colorForeground = "7"
+	colorAccent     = "2"
+	colorSecondary  = "12"
+	colorWarning    = "11"
+	colorError      = "9"
+	colorMuted      = "8"
+	colorHighlight  = "11"
+	colorInfo       = "4"
 
 	// Message states
-	colorUnread     = "231" // Bright white
-	colorRead       = "244" // Dimmed
-	colorMarked     = "25"  // Blue background
-	colorSelected   = "57"  // Purple background
-	colorThreadLine = "238" // Thread indicator color
+	colorUnread             = "15"
+	colorRead               = "8"
+	colorMarkedForeground   = "0"
+	colorMarkedBackground   = colorSecondary
+	colorSelectedForeground = "0"
+	colorSelectedBackground = colorAccent
 )
 
 // styleTabNormal defines the styling for tabs
@@ -48,7 +50,7 @@ var (
 
 	styleTabNormal = lipgloss.NewStyle().
 			Border(borderTab, true).
-			BorderForeground(lipgloss.Color(colorMuted)).
+			BorderForeground(lipgloss.Color(colorAccent)).
 			Padding(0, 1)
 
 	styleTabActive = styleTabNormal.Border(borderTabActive, true).
@@ -60,12 +62,6 @@ var (
 	styleSpinner = lipgloss.NewStyle().
 			Foreground(lipgloss.Color(colorAccent))
 
-	styleListTitle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color(colorUnread)).
-			Background(lipgloss.Color(colorMarked)).
-			Padding(0, 1)
-
 	styleListNoItems = lipgloss.NewStyle().
 				Foreground(lipgloss.Color(colorMuted)).
 				Align(lipgloss.Center)
@@ -73,26 +69,17 @@ var (
 	styleMessageNormal = lipgloss.NewStyle().
 				Foreground(lipgloss.Color(colorForeground))
 
-	styleMessageSelected = lipgloss.NewStyle().
-				Foreground(lipgloss.Color(colorHighlight)).
-				Background(lipgloss.Color(colorSelected)).
-				Bold(true)
-
-	styleMessageMarked = lipgloss.NewStyle().
-				Foreground(lipgloss.Color(colorUnread)).
-				Background(lipgloss.Color(colorMarked))
-
-	styleMessageDim = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(colorMuted))
-
 	styleStatusLine = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(colorUnread)).
-			Background(lipgloss.Color(colorMarked)).
+			Foreground(lipgloss.Color(colorBackground)).
+			Background(lipgloss.Color(colorAccent)).
 			Padding(0, 1).
 			Bold(true)
 
-	styleStatusBorder = lipgloss.NewStyle().
-				Foreground(lipgloss.Color(colorSelected))
+	stylePaginationActivePage = lipgloss.NewStyle().
+				Foreground(lipgloss.Color(colorSecondary))
+
+	stylePaginationInactivePage = lipgloss.NewStyle().
+				Foreground(lipgloss.Color(colorAccent))
 
 	// Message component styles - unread (bright)
 	styleMsgDateUnread = lipgloss.NewStyle().
@@ -116,13 +103,13 @@ var (
 
 	// Message component styles - read (dimmed)
 	styleMsgDateRead = lipgloss.NewStyle().
-				Foreground(lipgloss.Color(colorMuted))
+				Foreground(lipgloss.Color(colorRead))
 
 	styleMsgSenderRead = lipgloss.NewStyle().
 				Foreground(lipgloss.Color(colorRead))
 
 	styleMsgArrowRead = lipgloss.NewStyle().
-				Foreground(lipgloss.Color(colorMuted))
+				Foreground(lipgloss.Color(colorRead))
 
 	styleMsgRecipientRead = lipgloss.NewStyle().
 				Foreground(lipgloss.Color(colorRead))
@@ -131,12 +118,5 @@ var (
 				Foreground(lipgloss.Color(colorRead))
 
 	styleMsgTagsRead = lipgloss.NewStyle().
-				Foreground(lipgloss.Color(colorMuted))
-
-	// Thread and attachment indicators
-	styleMsgThread = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(colorThreadLine))
-
-	styleMsgAttachment = lipgloss.NewStyle().
-				Foreground(lipgloss.Color(colorWarning))
+				Foreground(lipgloss.Color(colorRead))
 )

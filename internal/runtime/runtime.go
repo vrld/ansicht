@@ -21,7 +21,7 @@ type Runtime struct {
 	Messages           *service.Messages
 	Status             *service.Status
 	inputCallbackStack []InputCallbackHandle
-	program            *tea.Program
+	SendMessage        func(tea.Msg)
 }
 
 //go:embed default_config.lua
@@ -55,7 +55,7 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 	L := lua.NewState()
 	lua.OpenLibraries(L)
 
-	runtime := &Runtime{luaState: L}
+	runtime := &Runtime{luaState: L, SendMessage: func(tea.Msg) {}}
 
 	// Create key table
 	L.NewTable()
@@ -136,16 +136,13 @@ func (r *Runtime) OnKey(keycode string) tea.Cmd {
 	top := r.luaState.Top()
 	defer r.luaState.SetTop(top)
 
-	// get binding
 	r.luaState.Global("key")
 	if !r.luaState.IsTable(-1) {
-		return nil
+		lua.Errorf(r.luaState, "Table `key` not found. Check your config.")
+		panic("unreachable")
 	}
-
 	r.luaState.Field(-1, keycode)
 
-	// Userdata -> emit event
-	// anything else -> nil
 	cmd, _ := r.getTeaCommand(-1)
 	return cmd
 }
@@ -154,6 +151,7 @@ func (r *Runtime) getTeaCommand(index int) (tea.Cmd, error) {
 	// execute functions until we get to the userdata
 	// this makes it possible to wrap events in multiple functions, see lua_runtime.lua
 	for r.luaState.IsFunction(-1) {
+		// TODO: exit when nesting is too deep?
 		r.luaState.Call(0, 1)
 	}
 

@@ -8,10 +8,6 @@ import (
 	"github.com/vrld/ansicht/internal/runtime"
 )
 
-func (m Model) Init() tea.Cmd {
-	return tea.Batch(m.searchCurrentQuery(0), m.spinner.Tick)
-}
-
 // Update handles messages and updates the model
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -81,23 +77,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateList(m.list.Index())
 		return m, nil
 
-	// open input
 	case runtime.InputMsg:
-		m.InputHandler.PushInputHandle(msg.Handle)
+		m.Runtime.PushInputHandle(msg.Handle)
 		m.focusSearch = true
 		m.input.Placeholder = msg.Placeholder
 		m.input.Prompt = msg.Prompt
 		m.input.Focus()
 		return m, nil
 
-	// spawn command completed
 	case runtime.SpawnResultMsg:
-		if m.SpawnHandler != nil {
-			return m, m.SpawnHandler.HandleSpawnResult(msg)
+		if m.Runtime != nil {
+			return m, m.Runtime.HandleSpawnResult(msg)
 		}
 		return m, nil
 
-	// status message set
 	case runtime.StatusSetMsg:
 		m.Status.Set(msg.Message)
 		return m, nil
@@ -110,7 +103,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				var cmd tea.Cmd
 				if query := m.input.Value(); query != "" {
 					m.InputHistory.Add(m.input.Prompt, query)
-					cmd = m.InputHandler.HandleInput(query)
+					cmd = m.Runtime.HandleInput(query)
 				}
 				m.focusSearch = false
 				m.input.Reset()
@@ -136,7 +129,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		} else {
 			m.Messages.Select(m.list.Index())
-			if cmd := m.KeyReceiver.OnKey(msg.String()); cmd != nil {
+			if cmd := m.Runtime.OnKey(msg.String()); cmd != nil {
 				return m, cmd
 			}
 		}

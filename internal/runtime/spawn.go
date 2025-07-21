@@ -53,10 +53,6 @@ func (r *Runtime) HandleSpawnResult(msg SpawnResultMsg) tea.Cmd {
 	return nil
 }
 
-func (r *Runtime) SetProgram(program *tea.Program) {
-	r.program = program
-}
-
 func completeHandleKey(handleId int) string {
 	return fmt.Sprintf("ansicht.spawn_complete_callback_handle_%d", handleId)
 }
@@ -137,15 +133,13 @@ func (r *Runtime) spawnCommand(command []string, timeout time.Duration, handleID
 	err := cmd.Run()
 
 	if ctx.Err() == context.DeadlineExceeded {
-		if r.program != nil {
-			r.program.Send(SpawnResultMsg{
-				Command:  command,
-				Stdout:   stdout.String(),
-				Stderr:   stderr.String(),
-				HandleID: handleID,
-				Timeout:  true,
-			})
-		}
+		r.SendMessage(SpawnResultMsg{
+			Command:  command,
+			Stdout:   stdout.String(),
+			Stderr:   stderr.String(),
+			HandleID: handleID,
+			Timeout:  true,
+		})
 		return
 	}
 
@@ -158,14 +152,12 @@ func (r *Runtime) spawnCommand(command []string, timeout time.Duration, handleID
 		}
 	}
 
-	if r.program != nil {
-		r.program.Send(SpawnResultMsg{
-			Command:    command,
-			ReturnCode: returnCode,
-			Stdout:     stdout.String(),
-			Stderr:     stderr.String(),
-			HandleID:   handleID,
-			Timeout:    false,
-		})
-	}
+	r.SendMessage(SpawnResultMsg{
+		Command:    command,
+		ReturnCode: returnCode,
+		Stdout:     stdout.String(),
+		Stderr:     stderr.String(),
+		HandleID:   handleID,
+		Timeout:    false,
+	})
 }

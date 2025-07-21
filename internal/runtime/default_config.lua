@@ -44,30 +44,26 @@ end
 -- wrapper function that returns a function that tags selected messages
 -- with the given tags and returns a refresh event
 local function tag_selected_messages(tags)
-  local selected = messages.selected()
-  local messages_of_interest = { selected }
-  -- messages.marked() gives a table of all messages marked with event.marks.*
-  for _, message in pairs(messages.marked()) do
-    if selected ~= message then
-      messages_of_interest[#messages_of_interest + 1] = message
-    end
-  end
-  -- notmuch.tag({msg1, msg2}, "+tag1", "-tag2", "+tag3")
-  -- equivalent to notmuch tag +tag1 -tag2 +tag3 id:... id:...
-  notmuch.tag(messages_of_interest, table.unpack(tags))
-
-  return event.refresh(messages_of_interest)
-end
-
-local function tag_selected_messages_event(tags)
   return function()
-    return tag_selected_messages(tags)
+    local selected = messages.selected()
+    local messages_of_interest = { selected }
+    -- messages.marked() gives a table of all messages marked with event.marks.*
+    for _, message in pairs(messages.marked()) do
+      if selected ~= message then
+        messages_of_interest[#messages_of_interest + 1] = message
+      end
+    end
+    -- notmuch.tag({msg1, msg2}, "+tag1", "-tag2", "+tag3")
+    -- equivalent to notmuch tag +tag1 -tag2 +tag3 id:... id:...
+    notmuch.tag(messages_of_interest, table.unpack(tags))
+
+    return event.refresh(messages_of_interest)
   end
 end
 
-key.d = tag_selected_messages_event { "+deleted", "-unread", "-inbox" }
-key.a = tag_selected_messages_event { "+archive", "-inbox" }
-key.u = tag_selected_messages_event { "+unread" }
+key.d = tag_selected_messages { "+deleted", "-unread", "-inbox" }
+key.a = tag_selected_messages { "+archive", "-inbox" }
+key.u = tag_selected_messages { "+unread" }
 
 key.x = event.marks.clear
 key.t = event.input {

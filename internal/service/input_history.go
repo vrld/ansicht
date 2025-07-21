@@ -1,5 +1,7 @@
 package service
 
+import "slices"
+
 import "fmt"
 
 type InputHistory struct {
@@ -62,7 +64,7 @@ func (h *InputHistory) Add(prompt, input string) {
 	// Remove existing entry if present
 	for i, entry := range history {
 		if entry == input {
-			history = append(history[:i], history[i+1:]...)
+			history = slices.Delete(history, i, i+1)
 			break
 		}
 	}
@@ -117,7 +119,7 @@ func (h *InputHistory) RemoveSlice(prompt string, lower, upper int) error {
 	currentIndex := h.selectedIndex[prompt]
 
 	// Remove the slice (inclusive)
-	newHistory := append(history[:lower], history[upper+1:]...)
+	newHistory := slices.Delete(history, lower, upper + 1)
 	h.histories[prompt] = newHistory
 
 	// Adjust selection index

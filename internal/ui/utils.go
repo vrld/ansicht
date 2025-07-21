@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"net/mail"
 	"strings"
 	"time"
 )
@@ -71,4 +72,17 @@ func cleanSubject(subject string) string {
 	}
 
 	return cleaned
+}
+
+func formatEmailAddress(address string) string {
+	parts, err := mail.ParseAddress(address)
+	if err != nil {
+		return address
+	}
+
+	if parts.Name != "" {
+		return parts.Name
+	}
+
+	return parts.Address
 }

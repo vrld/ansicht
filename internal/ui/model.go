@@ -22,33 +22,25 @@ type SearchResultMsg struct {
 	RowToSelect int
 }
 
-type KeyReceiver interface {
+type RuntimeInterface interface {
 	OnKey(keycode string) tea.Cmd
-}
-
-type InputHandler interface {
 	PushInputHandle(handle string)
 	HandleInput(input string) tea.Cmd
-}
-
-type SpawnHandler interface {
 	HandleSpawnResult(msg runtime.SpawnResultMsg) tea.Cmd
 }
 
 type Model struct {
-	KeyReceiver  KeyReceiver
 	Messages     *service.Messages
 	Queries      *service.Queries
 	InputHistory *service.InputHistory
 	Status       *service.Status
+	Runtime      RuntimeInterface
 	isLoading    bool
 	focusSearch  bool
 
-	InputHandler InputHandler
-	SpawnHandler SpawnHandler
-	list         list.Model
-	input        textinput.Model
-	spinner      spinner.Model
+	list    list.Model
+	input   textinput.Model
+	spinner spinner.Model
 
 	width int
 }
@@ -75,21 +67,24 @@ func NewModel() *Model {
 	messageList.SetFilteringEnabled(false)
 	messageList.SetShowTitle(false)
 	messageList.SetShowHelp(false)
+	messageList.SetShowPagination(false)
 	messageList.DisableQuitKeybindings()
 
 	// Style the list
-	listStyles := list.DefaultStyles()
-	listStyles.Title = styleListTitle
-	listStyles.NoItems = styleListNoItems
-	messageList.Styles = listStyles
+	messageList.Styles = list.DefaultStyles()
+	messageList.Styles.NoItems = styleListNoItems
 
 	return &Model{
-		focusSearch:  false,
-		input:        ti,
-		list:         messageList,
-		spinner:      sp,
-		width:        defaultWidth,
+		focusSearch: false,
+		input:       ti,
+		list:        messageList,
+		spinner:     sp,
+		width:       defaultWidth,
 	}
+}
+
+func (m Model) Init() tea.Cmd {
+	return tea.Batch(m.searchCurrentQuery(0), m.spinner.Tick)
 }
 
 func (m Model) renderStatusLine() string {
@@ -113,9 +108,22 @@ func (m Model) renderStatusLine() string {
 
 	statusText := "👀 " + leftStatus + strings.Repeat(" ", spacing) + rightStatus
 	statusLine := styleStatusLine.Render(statusText)
-	border := styleStatusBorder.Render(strings.Repeat("🬂", m.width))
 
-	return statusLine + "\n" + border
+	// top border is pagination
+	pageIndicatorWidth := m.width / m.list.Paginator.TotalPages - 1
+	border := ""
+	for page := range m.list.Paginator.TotalPages {
+		if page > 0 {
+			border += " "
+		}
+		if page == m.list.Paginator.Page {
+			border += stylePaginationActivePage.Render(strings.Repeat("🬂", pageIndicatorWidth))
+		} else {
+			border += stylePaginationInactivePage.Render(strings.Repeat("🬂", pageIndicatorWidth))
+		}
+	}
+	pad := strings.Repeat(" ", (m.width - ((pageIndicatorWidth + 1) * m.list.Paginator.TotalPages)) / 2)
+	return statusLine + "\n" + pad + border
 }
 
 func (m Model) renderTabs() string {
@@ -136,14 +144,14 @@ func (m Model) View() string {
 	statusLine := m.renderStatusLine()
 	tabs := m.renderTabs()
 
-	bottom_line := m.Status.Get()
+	bottomLine := m.Status.Get()
 
 	if m.isLoading {
-		bottom_line = fmt.Sprintf("%s Searching...", m.spinner.View())
+		bottomLine = fmt.Sprintf("%s Searching...", m.spinner.View())
 	}
 
 	if m.focusSearch {
-		bottom_line = m.input.View()
+		bottomLine = m.input.View()
 	}
 
 	return fmt.Sprintf(
@@ -151,6 +159,6 @@ func (m Model) View() string {
 		statusLine,
 		m.list.View(),
 		tabs,
-		bottom_line,
+		bottomLine,
 	)
 }

@@ -85,3 +85,7 @@ key.t = event.input {
 key.s = function()
   return event.status("Hello from Lua! Current status: " .. status.get())
 end
+
+function Startup()
+  return event.status("ansicht")
+end

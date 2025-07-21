@@ -23,6 +23,7 @@ type SearchResultMsg struct {
 }
 
 type RuntimeInterface interface {
+	OnStartup() tea.Cmd
 	OnKey(keycode string) tea.Cmd
 	PushInputHandle(handle string)
 	HandleInput(input string) tea.Cmd
@@ -84,7 +85,11 @@ func NewModel() *Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(m.searchCurrentQuery(0), m.spinner.Tick)
+	return tea.Batch(
+		m.searchCurrentQuery(0),
+		m.spinner.Tick,
+		m.Runtime.OnStartup(),
+	)
 }
 
 func (m Model) renderStatusLine() string {

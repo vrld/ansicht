@@ -124,6 +124,23 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 	return runtime, nil
 }
 
+func (r *Runtime) OnStartup() tea.Cmd {
+	top := r.luaState.Top()
+	defer r.luaState.SetTop(top)
+
+	r.luaState.Global("Startup")
+	if !r.luaState.IsFunction(-1) {
+		return nil
+	}
+
+	r.luaState.Call(0, 1)
+	cmd, _ := r.getTeaCommand(-1)
+
+	// TODO: load style and other config here
+
+	return cmd
+}
+
 // Call key binding defined in config. If the binding exists, it is an event from the
 // `event` table, or a  function with no arguments that returns an event or nil, e.g.,
 //

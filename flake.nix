@@ -21,6 +21,8 @@
           license = pkgs.lib.licenses.mit;
         };
 
+        buildInputs = [ pkgs.notmuch ];
+
       };
     in {
       packages = {

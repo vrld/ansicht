@@ -40,11 +40,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	// reload the current query
-	case runtime.RefreshResultsMsg:
+	case Refresh:
 		return m, m.loadCurrentQuery(m.list.Index())
 
 	// new query
-	case runtime.QueryNewMsg:
+	case QueryNewMsg:
 		m.Queries.Add(model.SearchQuery{
 			Query: msg.Query,
 			Name:  truncate(msg.Query, 10),
@@ -53,46 +53,39 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.loadCurrentQuery(0)
 
 	// switch between queries
-	case runtime.QueryNextMsg:
+	case QueryNextMsg:
 		m.Queries.SelectNext()
 		return m, m.loadCurrentQuery(0)
 
-	case runtime.QueryPrevMsg:
+	case QueryPrevMsg:
 		m.Queries.SelectPrevious()
 		return m, m.loadCurrentQuery(0)
 
 	// item selection
-	case runtime.MarksToggleMsg:
+	case MarksToggleMsg:
 		m.Messages.ToggleMark(m.list.Index())
 		m.updateList(m.list.Index())
 		return m, nil
 
-	case runtime.MarksInvertMsg:
+	case MarksInvertMsg:
 		m.Messages.InvertMarks()
 		m.updateList(m.list.Index())
 		return m, nil
 
-	case runtime.MarksClearMsg:
+	case MarksClearMsg:
 		m.Messages.ClearMarks()
 		m.updateList(m.list.Index())
 		return m, nil
 
-	case runtime.InputMsg:
-		m.Runtime.PushInputHandle(msg.Handle)
+	case OpenInputEvent:
 		m.focusSearch = true
 		m.input.Placeholder = msg.Placeholder
 		m.input.Prompt = msg.Prompt
 		m.input.Focus()
 		return m, nil
 
-	case runtime.SpawnResultMsg:
-		if m.Runtime != nil {
-			return m, m.Runtime.HandleSpawnResult(msg)
-		}
-		return m, nil
-
-	case runtime.StatusSetMsg:
-		m.Status.Set(msg.Message)
+	case runtime.SpawnResult:
+		m.Runtime.HandleSpawnResult(msg)
 		return m, nil
 
 	// key presses
@@ -100,14 +93,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.focusSearch {
 			switch msg.String() {
 			case "enter":
-				var cmd tea.Cmd
 				if query := m.input.Value(); query != "" {
 					m.InputHistory.Add(m.input.Prompt, query)
-					cmd = m.Runtime.HandleInput(query)
+					m.Runtime.HandleInput(query)
 				}
 				m.focusSearch = false
 				m.input.Reset()
-				return m, cmd
+				return m, nil
 
 			case "esc":
 				m.focusSearch = false
@@ -129,8 +121,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		} else {
 			m.Messages.Select(m.list.Index())
-			if cmd := m.Runtime.OnKey(msg.String()); cmd != nil {
-				return m, cmd
+			if m.Runtime.OnKey(msg.String()) {
+				return m, nil
 			}
 		}
 	}

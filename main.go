@@ -34,7 +34,10 @@ func main() {
 
 	// Start the application
 	p := tea.NewProgram(model, tea.WithAltScreen())
-	runtime.SendMessage = p.Send
+	runtime.Controller = &ui.RuntimeAdapter{
+		StatusService: status,
+		Program:       p,
+	}
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error running the program: %v", err)
 	}

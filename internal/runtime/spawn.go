@@ -8,10 +8,9 @@ import (
 	"time"
 
 	lua "github.com/Shopify/go-lua"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
-type SpawnResultMsg struct {
+type SpawnResult struct {
 	Command    []string
 	ReturnCode int
 	Stdout     string
@@ -20,10 +19,8 @@ type SpawnResultMsg struct {
 	Timeout    bool
 }
 
-func (r *Runtime) HandleSpawnResult(msg SpawnResultMsg) tea.Cmd {
-	handleID := msg.HandleID
-
-	r.luaState.PushString(completeHandleKey(handleID))
+func (r *Runtime) HandleSpawnResult(res SpawnResult) {
+	r.luaState.PushString(completeHandleKey(res.HandleID))
 	r.luaState.Table(lua.RegistryIndex)
 
 	if r.luaState.TypeOf(-1) == lua.TypeFunction {
@@ -31,33 +28,28 @@ func (r *Runtime) HandleSpawnResult(msg SpawnResultMsg) tea.Cmd {
 		r.luaState.CreateTable(0, 4)
 
 		r.luaState.PushString("command")
-		lPushStringTable(r.luaState, msg.Command)
+		lPushStringTable(r.luaState, res.Command)
 		r.luaState.SetTable(-3)
 
-		if !msg.Timeout {
-			lSetFieldInteger(r.luaState, -1, "return_code", msg.ReturnCode)
+		if !res.Timeout {
+			lSetFieldInteger(r.luaState, -1, "return_code", res.ReturnCode)
 		}
-		lSetFieldBool(r.luaState, -1, "timeout", msg.Timeout)
-		lSetFieldString(r.luaState, -1, "stdout", msg.Stdout)
-		lSetFieldString(r.luaState, -1, "stderr", msg.Stderr)
+		lSetFieldBool(r.luaState, -1, "timeout", res.Timeout)
+		lSetFieldString(r.luaState, -1, "stdout", res.Stdout)
+		lSetFieldString(r.luaState, -1, "stderr", res.Stderr)
 
-		r.luaState.Call(1, 1)
-		cmd, _ := r.getTeaCommand(-1)
+		r.luaState.Call(1, 0)
 
 		// Clean up both callbacks using derived keys
-		lSetFieldNil(r.luaState, lua.RegistryIndex, completeHandleKey(handleID))
-
-		return cmd
+		lSetFieldNil(r.luaState, lua.RegistryIndex, completeHandleKey(res.HandleID))
 	}
-
-	return nil
 }
 
 func completeHandleKey(handleId int) string {
 	return fmt.Sprintf("ansicht.spawn_complete_callback_handle_%d", handleId)
 }
 
-// spawn{"command", "arg1", "arg2", ..., timeout=60, on_complete=function, on_timeout=function}
+// spawn{"command", "arg1", "arg2", ..., timeout=60, next=function}
 var spawnHandleId int
 
 func (r *Runtime) luaSpawn(L *lua.State) int {
@@ -133,7 +125,7 @@ func (r *Runtime) spawnCommand(command []string, timeout time.Duration, handleID
 	err := cmd.Run()
 
 	if ctx.Err() == context.DeadlineExceeded {
-		r.SendMessage(SpawnResultMsg{
+		r.Controller.SpawnResult(SpawnResult{
 			Command:  command,
 			Stdout:   stdout.String(),
 			Stderr:   stderr.String(),
@@ -152,7 +144,7 @@ func (r *Runtime) spawnCommand(command []string, timeout time.Duration, handleID
 		}
 	}
 
-	r.SendMessage(SpawnResultMsg{
+	r.Controller.SpawnResult(SpawnResult{
 		Command:    command,
 		ReturnCode: returnCode,
 		Stdout:     stdout.String(),

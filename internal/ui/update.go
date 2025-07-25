@@ -22,19 +22,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-
-		// Update list height and width
-		// Account for: status line (1) + status border (1) + tabs (1) + bottom line (1) + margins (2)
-		listHeight := msg.Height - 6
-		m.list.SetHeight(listHeight)
-		m.list.SetWidth(msg.Width)
-
-		// Update the delegate's width for proper rendering
-		delegate := NewMessageDelegate(msg.Width)
-		m.list.SetDelegate(delegate)
-
-		// Refresh the list with the new dimensions
+		m.setLayoutDimension(msg.Width, msg.Height)
 		m.updateList(m.list.Index())
 
 		return m, nil
@@ -78,7 +66,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case OpenInputEvent:
-		m.focusSearch = true
+		m.focusInput = true
 		m.input.Placeholder = msg.Placeholder
 		m.input.Prompt = msg.Prompt
 		m.input.Focus()
@@ -90,19 +78,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// key presses
 	case tea.KeyMsg:
-		if m.focusSearch {
+		if m.focusInput {
 			switch msg.String() {
 			case "enter":
 				if query := m.input.Value(); query != "" {
 					m.InputHistory.Add(m.input.Prompt, query)
 					m.Runtime.HandleInput(query)
 				}
-				m.focusSearch = false
+				m.focusInput = false
 				m.input.Reset()
 				return m, nil
 
 			case "esc":
-				m.focusSearch = false
+				m.focusInput = false
 				m.InputHistory.Reset(m.input.Prompt)
 				m.input.Reset()
 				return m, nil
@@ -131,7 +119,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
-	if m.focusSearch {
+	if m.focusInput {
 		m.input, cmd = m.input.Update(msg)
 		cmds = append(cmds, cmd)
 	} else {
@@ -164,7 +152,7 @@ func (m *Model) loadCurrentQuery(rowToSelect int) tea.Cmd {
 }
 
 func (m *Model) updateList(toSelect int) {
-	items := CreateMessageItems(m.Messages)
+	items := MessagesToListItems(m.Messages)
 
 	m.list.SetItems(items)
 	m.list.Select(toSelect)

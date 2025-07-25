@@ -56,8 +56,8 @@ local function tag_selected_messages(tags)
   -- equivalent to notmuch tag +tag1 -tag2 +tag3 id:... id:...
   ansicht.tag(messages_of_interest, table.unpack(tags))
 
-  ansicht.refresh(messages_of_interest)
   ansicht.status.set("Tagged " .. #messages_of_interest .. " messages: " .. table.concat(tags, " "))
+  ansicht.refresh(messages_of_interest)
 end
 
 key.d = function() tag_selected_messages { "+deleted", "-unread", "-inbox" } end

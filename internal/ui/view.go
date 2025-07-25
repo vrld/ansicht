@@ -2,83 +2,141 @@ package ui
 
 import (
 	"fmt"
-	"github.com/charmbracelet/lipgloss"
 	"strings"
 	"time"
+	"unicode/utf8"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
+var borderColor = lipgloss.Color(colorMuted)
+
 func (m Model) View() string {
-	statusLine := m.renderStatusLine()
 	tabs := m.renderTabs()
-
-	bottomLine := m.Status.Get()
-
-	if m.isLoading {
-		bottomLine = fmt.Sprintf("%s Searching...", m.spinner.View())
-	}
-
-	if m.focusSearch {
-		bottomLine = m.input.View()
-	}
-
-	return fmt.Sprintf(
-		"%s\n%s\n%s\n%s",
-		statusLine,
-		m.list.View(),
-		tabs,
-		bottomLine,
-	)
+	status := m.renderStatusLine()
+	mails := m.renderMails(m.height - (lipgloss.Height(tabs) + lipgloss.Height(status)))
+	return fmt.Sprintf("%s\n%s\n%s", tabs, mails, status)
 }
 
-func (m Model) renderStatusLine() string {
-	var leftStatus, rightStatus string
+func (m *Model) setLayoutDimension(width, height int) {
+	m.width = width
+	m.height = height
+	m.list.SetHeight(1)
+	m.list.SetWidth(width-2)
+	m.list.SetDelegate(MessageDelegate{width-2})
+}
 
-	if query, ok := m.Queries.Current(); ok {
+// TABS
+
+type BorderTabStyle struct {
+	Active bool
+	First  bool
+	Gap    bool
+}
+
+func (s BorderTabStyle) lipgloss() lipgloss.Style {
+	bottom := "─"
+	if s.Active {
+		bottom = " "
+	}
+
+	bottomLeft := "┴"
+	if s.First && s.Active {
+		bottomLeft = "│"
+	} else if s.First && !s.Active {
+		bottomLeft = "├"
+	} else if !s.First && s.Active {
+		bottomLeft = "┘"
+	}
+
+	bottomRight := "┴"
+	side := "│"
+	if s.Active {
+		bottomRight = "└"
+	} else if s.Gap {
+		bottomRight = "┐"
+		side = " "
+	}
+
+	border := lipgloss.Border{
+		Top:         "─",
+		Bottom:      bottom,
+		Left:        side,
+		Right:       side,
+		TopRight:    "╮",
+		TopLeft:     "╭",
+		BottomRight: bottomRight,
+		BottomLeft:  bottomLeft,
+	}
+
+	style := lipgloss.NewStyle().
+		Border(border, true).
+		BorderForeground(borderColor).
+		Padding(0, 1)
+
+	if s.Active {
+		style = style.Foreground(lipgloss.Color(colorAccent)).Bold(true)
+	}
+
+	return style
+}
+
+func (m *Model) renderTabs() string {
+	var tabs []string
+	tabWidth := 0
+	for i, query := range m.Queries.All() {
+		queryTab := BorderTabStyle{
+			Active: i == m.Queries.SelectedIndex(),
+			First:  i == 0,
+		}.lipgloss().Render(query.Name)
+
+		tabs = append(tabs, queryTab)
+		tabWidth += utf8.RuneCountInString(query.Name) + 4
+	}
+	tabRow := lipgloss.JoinHorizontal(lipgloss.Bottom, tabs...)
+
+	gap := BorderTabStyle{Gap: true}.lipgloss().
+		BorderLeft(false).BorderTop(false).
+		Render(strings.Repeat(" ", max(0, m.width-tabWidth-3)))
+
+	return lipgloss.JoinHorizontal(lipgloss.Bottom, tabRow, gap)
+}
+
+// MAILS
+
+var (
+	mailsBorder = lipgloss.Border{Left: "│", Right: "│", Bottom: "─", BottomLeft: "└", BottomRight: "┘"}
+	mailsStyle  = lipgloss.NewStyle().Border(mailsBorder, false, true, true, true).BorderForeground(borderColor)
+)
+
+func (m *Model) renderMails(listHeight int) string {
+	m.list.Styles.NoItems = styleListNoItems.Width(m.width-2).Height(listHeight-1)
+	m.list.SetHeight(listHeight - 1)
+	return mailsStyle.Render(m.list.View())
+}
+
+// STATUS LINE
+
+func (m *Model) renderStatusLine() string {
+	if m.focusInput {
+		return " " + m.input.View()
+	}
+
+	var rightStatus string
+	rightStatus = fmt.Sprintf("%s Searching...", m.spinner.View())
+	if m.isLoading {
+	} else if query, ok := m.Queries.Current(); ok {
 		markedCount := m.Messages.MarkedCount()
 		totalCount := m.Messages.Count()
 		currentPos := m.list.Index() + 1
 
-		leftStatus = fmt.Sprintf("%s | %d/%d | %d marked", query.Query, currentPos, totalCount, markedCount)
-	} else {
-		leftStatus = "No query selected"
+		rightStatus = fmt.Sprintf("%s｜%d/%d｜%d marked", query.Query, currentPos, totalCount, markedCount)
 	}
-
-	// Add current time on the right
-	rightStatus = time.Now().Format("15:04")
+	rightStatus = fmt.Sprintf("👀 %s ｢%s｣", rightStatus, time.Now().Format("15:04"))
 
 	// Calculate spacing to right-align the time
-	spacing := max(m.width-2-2-len(leftStatus)-len(rightStatus), 1)
+	spacing := max(m.width-5-utf8.RuneCountInString(m.Status.Get())-utf8.RuneCountInString(rightStatus), 1)
 
-	statusText := "👀 " + leftStatus + strings.Repeat(" ", spacing) + rightStatus
-	statusLine := styleStatusLine.Render(statusText)
-
-	// top border is pagination
-	pageIndicatorWidth := m.width/m.list.Paginator.TotalPages - 1
-	border := ""
-	for page := range m.list.Paginator.TotalPages {
-		if page > 0 {
-			border += " "
-		}
-		if page == m.list.Paginator.Page {
-			border += stylePaginationActivePage.Render(strings.Repeat("🬂", pageIndicatorWidth))
-		} else {
-			border += stylePaginationInactivePage.Render(strings.Repeat("🬂", pageIndicatorWidth))
-		}
-	}
-	pad := strings.Repeat(" ", (m.width-((pageIndicatorWidth+1)*m.list.Paginator.TotalPages))/2)
-	return statusLine + "\n" + pad + border
-}
-
-func (m Model) renderTabs() string {
-	var tabs []string
-	for i, query := range m.Queries.All() {
-		style := styleTabNormal
-		if i == m.Queries.SelectedIndex() {
-			style = styleTabActive
-		}
-		tabs = append(tabs, style.Render(query.Name))
-	}
-	tab_row := lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
-	gap := styleTabGap.Render(strings.Repeat(" ", max(0, m.width)))
-	return lipgloss.JoinHorizontal(lipgloss.Top, tab_row, gap)
+	statusText := m.Status.Get() + strings.Repeat(" ", spacing) + rightStatus
+	return styleStatusLine.Render(statusText)
 }

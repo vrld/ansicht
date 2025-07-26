@@ -11,18 +11,23 @@ type MessageIndex struct {
 	MessageIdx int
 }
 
-type Messages struct {
+type messages struct {
 	threads        []model.Thread
 	messageIndex   []MessageIndex
 	selectedIndex  int
 	markedMessages map[int]MessageIndex
 }
 
-func NewMessages() *Messages {
-	return &Messages{}
+var messagesInstance *messages
+
+func Messages() *messages {
+	if messagesInstance == nil {
+		messagesInstance = &messages{}
+	}
+	return messagesInstance
 }
 
-func (m *Messages) SetThreads(threads []model.Thread) {
+func (m *messages) SetThreads(threads []model.Thread) {
 	m.ClearMarks()
 	m.threads = threads
 	m.messageIndex = make([]MessageIndex, 0, len(threads)*2)
@@ -38,15 +43,15 @@ func (m *Messages) SetThreads(threads []model.Thread) {
 	}
 }
 
-func (m *Messages) Count() int {
+func (m *messages) Count() int {
 	return len(m.messageIndex)
 }
 
-func (m *Messages) Selected() int {
+func (m *messages) Selected() int {
 	return m.selectedIndex
 }
 
-func (m *Messages) Select(i int) error {
+func (m *messages) Select(i int) error {
 	if i < 0 || i >= m.Count() {
 		return fmt.Errorf("index %d out of bounds: (0, %d)", i, m.Count())
 	}
@@ -54,7 +59,7 @@ func (m *Messages) Select(i int) error {
 	return nil
 }
 
-func (m *Messages) IsMarked(i int) bool {
+func (m *messages) IsMarked(i int) bool {
 	if i < 0 || i >= m.Count() {
 		return false
 	}
@@ -63,7 +68,7 @@ func (m *Messages) IsMarked(i int) bool {
 	return exists
 }
 
-func (m *Messages) Mark(i int) {
+func (m *messages) Mark(i int) {
 	if i < 0 || i >= m.Count() {
 		return
 	}
@@ -71,7 +76,7 @@ func (m *Messages) Mark(i int) {
 	m.markedMessages[i] = m.messageIndex[i]
 }
 
-func (m *Messages) Unmark(i int) {
+func (m *messages) Unmark(i int) {
 	if i < 0 || i >= m.Count() {
 		return
 	}
@@ -79,7 +84,7 @@ func (m *Messages) Unmark(i int) {
 	delete(m.markedMessages, i)
 }
 
-func (m *Messages) ToggleMark(i int) {
+func (m *messages) ToggleMark(i int) {
 	if i < 0 || i >= m.Count() {
 		return
 	}
@@ -91,11 +96,11 @@ func (m *Messages) ToggleMark(i int) {
 	}
 }
 
-func (m *Messages) ClearMarks() {
+func (m *messages) ClearMarks() {
 	m.markedMessages = make(map[int]MessageIndex)
 }
 
-func (m *Messages) InvertMarks() {
+func (m *messages) InvertMarks() {
 	expectedSize := m.Count() - len(m.markedMessages)
 	newSelection := make(map[int]MessageIndex, expectedSize)
 	for row, index := range m.messageIndex {
@@ -106,7 +111,7 @@ func (m *Messages) InvertMarks() {
 	m.markedMessages = newSelection
 }
 
-func (m *Messages) Get(i int) *model.Message {
+func (m *messages) Get(i int) *model.Message {
 	if i < 0 || i >= m.Count() {
 		return nil
 	}
@@ -115,7 +120,7 @@ func (m *Messages) Get(i int) *model.Message {
 	return &m.threads[idx.ThreadIdx].Messages[idx.MessageIdx]
 }
 
-func (m *Messages) GetAll() []*model.Message {
+func (m *messages) GetAll() []*model.Message {
 	res := make([]*model.Message, 0, m.Count())
 	for _, idx := range m.messageIndex {
 		res = append(res, &m.threads[idx.ThreadIdx].Messages[idx.MessageIdx])
@@ -124,11 +129,11 @@ func (m *Messages) GetAll() []*model.Message {
 	return res
 }
 
-func (m *Messages) GetSelected() *model.Message {
+func (m *messages) GetSelected() *model.Message {
 	return m.Get(m.selectedIndex)
 }
 
-func (m *Messages) GetMarked() []*model.Message {
+func (m *messages) GetMarked() []*model.Message {
 	selected := make([]*model.Message, 0, len(m.markedMessages))
 	for _, idx := range m.markedMessages {
 		selected = append(selected, &m.threads[idx.ThreadIdx].Messages[idx.MessageIdx])
@@ -137,6 +142,6 @@ func (m *Messages) GetMarked() []*model.Message {
 	return selected
 }
 
-func (m *Messages) MarkedCount() int {
+func (m *messages) MarkedCount() int {
 	return len(m.markedMessages)
 }

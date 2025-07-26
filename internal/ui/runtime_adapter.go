@@ -7,7 +7,6 @@ import (
 )
 
 type RuntimeAdapter struct {
-	StatusService *service.Status
 	Program       *tea.Program
 }
 
@@ -20,7 +19,7 @@ func (a *RuntimeAdapter) Refresh() {
 }
 
 func (a *RuntimeAdapter) Status(message string) {
-	a.StatusService.Set(message)
+	service.Status().Set(message)
 	go a.Program.Send(message) // unhandled, but causes a redraw
 }
 

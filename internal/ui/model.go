@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/vrld/ansicht/internal/model"
 	"github.com/vrld/ansicht/internal/runtime"
-	"github.com/vrld/ansicht/internal/service"
 )
 
 // sent when a search completes
@@ -16,6 +15,7 @@ type SearchResultMsg struct {
 	Result      model.SearchResult
 	Error       error
 	RowToSelect int
+	QueryString string
 }
 
 type RuntimeInterface interface {
@@ -26,23 +26,18 @@ type RuntimeInterface interface {
 }
 
 type Model struct {
-	Messages     *service.Messages
-	Queries      *service.Queries
-	InputHistory *service.InputHistory
-	Status       *service.Status
-	Runtime      RuntimeInterface
-	isLoading    bool
-	focusInput  bool
-
-	list    list.Model
-	input   textinput.Model
-	spinner spinner.Model
-
-	width int
-	height int
+	runtime            RuntimeInterface
+	isLoading          bool
+	focusInput         bool
+	currentQueryString string
+	list               list.Model
+	input              textinput.Model
+	spinner            spinner.Model
+	width              int
+	height             int
 }
 
-func NewModel() *Model {
+func NewModel(runtime RuntimeInterface) *Model {
 	// search box
 	ti := textinput.New()
 	ti.Placeholder = "tag:unread" // TODO: random *valid* query
@@ -72,20 +67,18 @@ func NewModel() *Model {
 	messageList.Styles.NoItems = styleListNoItems
 
 	return &Model{
+		runtime:    runtime,
 		focusInput: false,
-		input:       ti,
-		list:        messageList,
-		spinner:     sp,
-		width:       defaultWidth,
+		input:      ti,
+		list:       messageList,
+		spinner:    sp,
+		width:      defaultWidth,
 	}
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Sequence(
-		m.searchCurrentQuery(0),
-		func() tea.Msg {
-			m.Runtime.OnStartup()
-			return m.spinner.Tick
-		},
-	)
+	return func() tea.Msg {
+		m.runtime.OnStartup()
+		return Refresh{}
+	}
 }

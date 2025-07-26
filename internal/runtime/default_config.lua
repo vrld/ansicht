@@ -36,6 +36,7 @@ key.enter = function()
     message.filename,
     next=function()
       ansicht.tag(message, "-unread")
+      ansicht.status.set("Tagged -unread")
       ansicht.refresh { message }
     end
   }

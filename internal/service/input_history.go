@@ -4,27 +4,31 @@ import "slices"
 
 import "fmt"
 
-type InputHistory struct {
+type inputHistory struct {
 	histories     map[string][]string
 	selectedIndex map[string]int
 }
 
-func NewInputHistory() *InputHistory {
-	return &InputHistory{
-		histories:     make(map[string][]string),
-		selectedIndex: make(map[string]int),
+var inputHistoryInstance *inputHistory
+func InputHistory() *inputHistory {
+	if inputHistoryInstance == nil {
+		inputHistoryInstance = &inputHistory{
+			histories:     make(map[string][]string),
+			selectedIndex: make(map[string]int),
+		}
 	}
+	return inputHistoryInstance
 }
 
-func (h *InputHistory) Count(prompt string) int {
+func (h *inputHistory) Count(prompt string) int {
 	return len(h.histories[prompt])
 }
 
-func (h *InputHistory) Selected(prompt string) int {
+func (h *inputHistory) Selected(prompt string) int {
 	return h.selectedIndex[prompt]
 }
 
-func (h *InputHistory) Select(prompt string, index int) error {
+func (h *inputHistory) Select(prompt string, index int) error {
 	history := h.histories[prompt]
 	if index < 0 || index > len(history) {
 		return fmt.Errorf("index %d out of bounds: (0, %d)", index, len(history))
@@ -34,27 +38,27 @@ func (h *InputHistory) Select(prompt string, index int) error {
 	return nil
 }
 
-func (h *InputHistory) First(prompt string) error {
+func (h *inputHistory) First(prompt string) error {
 	return h.Select(prompt, 0)
 }
 
-func (h *InputHistory) Previous(prompt string) error {
+func (h *inputHistory) Previous(prompt string) error {
 	return h.Select(prompt, h.Selected(prompt)-1)
 }
 
-func (h *InputHistory) Next(prompt string) error {
+func (h *inputHistory) Next(prompt string) error {
 	return h.Select(prompt, h.Selected(prompt)+1)
 }
 
-func (h *InputHistory) Last(prompt string) error {
+func (h *inputHistory) Last(prompt string) error {
 	return h.Select(prompt, h.Count(prompt)-1)
 }
 
-func (h *InputHistory) Reset(prompt string) {
+func (h *inputHistory) Reset(prompt string) {
 	h.selectedIndex[prompt] = h.Count(prompt)
 }
 
-func (h *InputHistory) Add(prompt, input string) {
+func (h *inputHistory) Add(prompt, input string) {
 	if input == "" {
 		return
 	}
@@ -73,7 +77,7 @@ func (h *InputHistory) Add(prompt, input string) {
 	h.histories[prompt] = history
 }
 
-func (h *InputHistory) Get(prompt string) string {
+func (h *inputHistory) Get(prompt string) string {
 	history := h.histories[prompt]
 	currentIndex := h.selectedIndex[prompt]
 
@@ -84,11 +88,11 @@ func (h *InputHistory) Get(prompt string) string {
 	return history[currentIndex]
 }
 
-func (h *InputHistory) Remove(prompt string, index int) error {
+func (h *inputHistory) Remove(prompt string, index int) error {
 	return h.RemoveSlice(prompt, index, index)
 }
 
-func (h *InputHistory) RemoveSlice(prompt string, lower, upper int) error {
+func (h *inputHistory) RemoveSlice(prompt string, lower, upper int) error {
 	history := h.histories[prompt]
 	length := len(history)
 

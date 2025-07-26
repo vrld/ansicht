@@ -3,6 +3,7 @@ package runtime
 import (
 	lua "github.com/Shopify/go-lua"
 	"github.com/vrld/ansicht/internal/model"
+	"github.com/vrld/ansicht/internal/service"
 )
 
 // returns message[field] where message is the message table at `index` on the stack
@@ -21,19 +22,19 @@ func getMessageField(L *lua.State, index int, field string) (string, bool) {
 
 // put all messages on the stack
 func (r *Runtime) luaMessagesAll(L *lua.State) int {
-	pushMessagesTable(L, r.Messages.GetAll())
+	pushMessagesTable(L, service.Messages().GetAll())
 	return 1
 }
 
 // put selected/highligted message on the stack
 func (r *Runtime) luaMessagesSelected(L *lua.State) int {
-	pushMessage(L, r.Messages.GetSelected())
+	pushMessage(L, service.Messages().GetSelected())
 	return 1
 }
 
 // put marked messages on the stack
 func (r *Runtime) luaMessagesMarked(L *lua.State) int {
-	pushMessagesTable(L, r.Messages.GetMarked())
+	pushMessagesTable(L, service.Messages().GetMarked())
 	return 1
 }
 
@@ -76,7 +77,7 @@ func isMessage(L *lua.State, index int) bool {
 	top := L.Top()
 	defer L.SetTop(top)
 
-	L.Field(-1, "__type")
+	L.Field(index, "__type")
 	if name, ok := L.ToString(-1); ok {
 		return name == LUA_TYPE_ID_MESSAGE
 	}

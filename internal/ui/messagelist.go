@@ -30,13 +30,13 @@ func (i MessageItem) FilterValue() string {
 		strings.Join(i.Message.Tags, " "))
 }
 
-func MessagesToListItems(messages *service.Messages) []list.Item {
+func ListItemsFromMessages() []list.Item {
 	var items []list.Item
 
-	for row, message := range messages.GetAll() {
+	for row, message := range service.Messages().GetAll() {
 		items = append(items, MessageItem{
 			Message: message,
-			Marked:  messages.IsMarked(row),
+			Marked:  service.Messages().IsMarked(row),
 		})
 	}
 
@@ -101,7 +101,7 @@ func (d MessageDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 			return s.Background(bg).Foreground(fg)
 		})
 	} else if item.Marked {
-		bg := lipgloss.Color(colorAccentBright)
+		bg := lipgloss.Color(colorTertiaryBright)
 		fg := lipgloss.Color(colorBackground)
 		styles = styles.Apply(func(s lipgloss.Style) lipgloss.Style {
 			return s.Background(bg).Foreground(fg)

@@ -6,19 +6,23 @@ import (
 	"github.com/vrld/ansicht/internal/db"
 	"github.com/vrld/ansicht/internal/model"
 	"github.com/vrld/ansicht/internal/runtime"
+	"github.com/vrld/ansicht/internal/service"
 )
 
 // Update handles messages and updates the model
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case SearchResultMsg:
-		m.isLoading = false
-		if msg.Error != nil {
-			// TODO: Show error in UI
-			return m, nil
+		// Only process if this result matches the current query
+		if msg.QueryString == m.currentQueryString {
+			m.isLoading = false
+			if msg.Error != nil {
+				// TODO: Show error in UI
+				return m, nil
+			}
+			service.Messages().SetThreads(msg.Result.Threads)
+			m.updateList(msg.RowToSelect)
 		}
-		m.Messages.SetThreads(msg.Result.Threads)
-		m.updateList(msg.RowToSelect)
 		return m, nil
 
 	case tea.WindowSizeMsg:
@@ -33,35 +37,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// new query
 	case QueryNewMsg:
-		m.Queries.Add(model.SearchQuery{
+		service.Queries().Add(model.SearchQuery{
 			Query: msg.Query,
 			Name:  truncate(msg.Query, 10),
 		})
-		m.Queries.SelectLast()
+		service.Queries().SelectLast()
 		return m, m.loadCurrentQuery(0)
 
 	// switch between queries
 	case QueryNextMsg:
-		m.Queries.SelectNext()
+		service.Queries().SelectNext()
 		return m, m.loadCurrentQuery(0)
 
 	case QueryPrevMsg:
-		m.Queries.SelectPrevious()
+		service.Queries().SelectPrevious()
 		return m, m.loadCurrentQuery(0)
 
 	// item selection
 	case MarksToggleMsg:
-		m.Messages.ToggleMark(m.list.Index())
+		service.Messages().ToggleMark(m.list.Index())
 		m.updateList(m.list.Index())
 		return m, nil
 
 	case MarksInvertMsg:
-		m.Messages.InvertMarks()
+		service.Messages().InvertMarks()
 		m.updateList(m.list.Index())
 		return m, nil
 
 	case MarksClearMsg:
-		m.Messages.ClearMarks()
+		service.Messages().ClearMarks()
 		m.updateList(m.list.Index())
 		return m, nil
 
@@ -73,7 +77,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case runtime.SpawnResult:
-		m.Runtime.HandleSpawnResult(msg)
+		m.runtime.HandleSpawnResult(msg)
 		return m, nil
 
 	// key presses
@@ -82,8 +86,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "enter":
 				if query := m.input.Value(); query != "" {
-					m.InputHistory.Add(m.input.Prompt, query)
-					m.Runtime.HandleInput(query)
+					service.InputHistory().Add(m.input.Prompt, query)
+					m.runtime.HandleInput(query)
 				}
 				m.focusInput = false
 				m.input.Reset()
@@ -91,25 +95,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case "esc":
 				m.focusInput = false
-				m.InputHistory.Reset(m.input.Prompt)
+				service.InputHistory().Reset(m.input.Prompt)
 				m.input.Reset()
 				return m, nil
 
 			case "up":
-				if err := m.InputHistory.Previous(m.input.Prompt); err == nil {
-					m.input.SetValue(m.InputHistory.Get(m.input.Prompt))
+				if err := service.InputHistory().Previous(m.input.Prompt); err == nil {
+					m.input.SetValue(service.InputHistory().Get(m.input.Prompt))
 				}
 				return m, nil
 
 			case "down":
-				if err := m.InputHistory.Next(m.input.Prompt); err == nil {
-					m.input.SetValue(m.InputHistory.Get(m.input.Prompt))
+				if err := service.InputHistory().Next(m.input.Prompt); err == nil {
+					m.input.SetValue(service.InputHistory().Get(m.input.Prompt))
 				}
 				return m, nil
 			}
 		} else {
-			m.Messages.Select(m.list.Index())
-			if m.Runtime.OnKey(msg.String()) {
+			service.Messages().Select(m.list.Index())
+			if m.runtime.OnKey(msg.String()) {
 				return m, nil
 			}
 		}
@@ -137,24 +141,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) searchCurrentQuery(rowToSelect int) tea.Cmd {
 	return func() tea.Msg {
-		if query, ok := m.Queries.Current(); ok {
+		if query, ok := service.Queries().Current(); ok {
 			result, err := db.FindThreads(&query)
-			return SearchResultMsg{Result: result, Error: err, RowToSelect: rowToSelect}
+			return SearchResultMsg{Result: result, Error: err, RowToSelect: rowToSelect, QueryString: query.Query}
 		}
 		return nil
 	}
 }
 
 func (m *Model) loadCurrentQuery(rowToSelect int) tea.Cmd {
-	m.isLoading = true
-	m.list.SetItems([]list.Item{})
-	return tea.Batch(m.searchCurrentQuery(rowToSelect), m.spinner.Tick)
+	if query, ok := service.Queries().Current(); ok {
+		m.currentQueryString = query.Query
+		m.isLoading = true
+		m.list.SetItems([]list.Item{})
+		return tea.Batch(m.searchCurrentQuery(rowToSelect), m.spinner.Tick)
+	}
+	return nil
 }
 
 func (m *Model) updateList(toSelect int) {
-	items := MessagesToListItems(m.Messages)
+	items := ListItemsFromMessages()
 
 	m.list.SetItems(items)
 	m.list.Select(toSelect)
-	m.Messages.Select(toSelect)
+	service.Messages().Select(toSelect)
 }

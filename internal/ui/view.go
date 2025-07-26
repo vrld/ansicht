@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/vrld/ansicht/internal/service"
 )
 
 var borderColor = lipgloss.Color(colorMuted)
@@ -84,9 +85,9 @@ func (s BorderTabStyle) lipgloss() lipgloss.Style {
 func (m *Model) renderTabs() string {
 	var tabs []string
 	tabWidth := 0
-	for i, query := range m.Queries.All() {
+	for i, query := range service.Queries().All() {
 		queryTab := BorderTabStyle{
-			Active: i == m.Queries.SelectedIndex(),
+			Active: i == service.Queries().SelectedIndex(),
 			First:  i == 0,
 		}.lipgloss().Render(query.Name)
 
@@ -125,9 +126,9 @@ func (m *Model) renderStatusLine() string {
 	var rightStatus string
 	rightStatus = fmt.Sprintf("%s Searching...", m.spinner.View())
 	if m.isLoading {
-	} else if query, ok := m.Queries.Current(); ok {
-		markedCount := m.Messages.MarkedCount()
-		totalCount := m.Messages.Count()
+	} else if query, ok := service.Queries().Current(); ok {
+		markedCount := service.Messages().MarkedCount()
+		totalCount := service.Messages().Count()
 		currentPos := m.list.Index() + 1
 
 		rightStatus = fmt.Sprintf("%s｜%d/%d｜%d marked", query.Query, currentPos, totalCount, markedCount)
@@ -135,8 +136,8 @@ func (m *Model) renderStatusLine() string {
 	rightStatus = fmt.Sprintf("👀 %s ｢%s｣", rightStatus, time.Now().Format("15:04"))
 
 	// Calculate spacing to right-align the time
-	spacing := max(m.width-5-utf8.RuneCountInString(m.Status.Get())-utf8.RuneCountInString(rightStatus), 1)
+	spacing := max(m.width-5-utf8.RuneCountInString(service.Status().Get())-utf8.RuneCountInString(rightStatus), 1)
 
-	statusText := m.Status.Get() + strings.Repeat(" ", spacing) + rightStatus
+	statusText := service.Status().Get() + strings.Repeat(" ", spacing) + rightStatus
 	return styleStatusLine.Render(statusText)
 }

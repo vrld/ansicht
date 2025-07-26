@@ -2,29 +2,34 @@ package service
 
 import "sync"
 
-type Status struct {
+type status struct {
 	mu      sync.RWMutex
 	message string
 }
 
-func NewStatus() *Status {
-	return &Status{
-		message: "",
+var statusInstance *status
+
+func Status() *status {
+	if statusInstance == nil {
+		statusInstance = &status{
+			message: "",
+		}
 	}
+	return statusInstance
 }
 
-func (s *Status) Set(message string) {
+func (s *status) Set(message string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.message = message
 }
 
-func (s *Status) Get() string {
+func (s *status) Get() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.message
 }
 
-func (s *Status) Clear() {
+func (s *status) Clear() {
 	s.Set("")
 }

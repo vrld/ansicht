@@ -14,8 +14,6 @@ import (
 
 type Runtime struct {
 	luaState        *lua.State
-	Messages        *service.Messages
-	Status          *service.Status
 	countOpenInputs int
 	Controller      ControllerAdapter
 }
@@ -194,6 +192,6 @@ func luaNotmuchTag(L *lua.State) int {
 
 // returns the current status message
 func (r *Runtime) luaStatusGet(L *lua.State) int {
-	L.PushString(r.Status.Get())
+	L.PushString(service.Status().Get())
 	return 1
 }

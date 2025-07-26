@@ -17,6 +17,6 @@ type StatusSetMsg struct {
 }
 
 type OpenInputEvent struct {
-	Prompt string
+	Prompt      string
 	Placeholder string
 }

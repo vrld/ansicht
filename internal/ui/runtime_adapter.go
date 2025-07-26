@@ -7,7 +7,7 @@ import (
 )
 
 type RuntimeAdapter struct {
-	Program       *tea.Program
+	Program *tea.Program
 }
 
 func (a *RuntimeAdapter) Quit() {

@@ -1,11 +1,5 @@
 # TODO
 
-- Add logging service
-  - Logs to file
-  - Log lines have timestamp and severity
-  - Location configurable on command line with XDG-compatible default
-  - overwrites log files by default
-
 - Make colors configurable in runtime
 
       ansicht.set_theme{
@@ -40,7 +34,25 @@
     - will then show "world" for 5 seconds (more recent)
     - will then show "hello" for 5 seconds (longest timeout)
 
+- Refactor history service
+  - selection should not be part of the service
+    - just hold history of inputs sorted by prompt
+    - `Get(prompt, index)`
+    - `Count(prompt)`
+    - `Add(prompt, input)`
+    - `Remove(prompt, index[, len])`
+    - `Clear(prompt)`
+
+  - externalize selection as own object, bound to prompt
+    - `selection := service.InputHistory().GetSelection(prompt)`
+    - `selection.Next()`, ...
+    - `selection.Get()`
+
 - Expose history service in runtime
+
+      #ansicht.history[prompt]  # Count(prompt)
+      ansicht.history[prompt][i]
+      ansicht.history[prompt][i + 1] = "foo"
 
 - Save input history to file
 

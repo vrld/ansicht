@@ -82,7 +82,7 @@ key.t = function ()
   }
 end
 
--- test status functionality
 function Startup()
-  return ansicht.status.set("ansicht")
+  ansicht.log.info("Hello from Lua")
+  ansicht.status.set("ansicht")
 end

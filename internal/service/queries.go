@@ -19,6 +19,7 @@ func Queries() *queries {
 
 	savedQueries, err := db.GetSavedQueries()
 	if err != nil || len(savedQueries) == 0 {
+		Logger().Warning(err.Error())
 		savedQueries = []model.SearchQuery{
 			{Name: "INBOX", Query: "query:INBOX"},
 		}

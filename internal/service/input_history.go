@@ -6,10 +6,14 @@ import "fmt"
 
 type inputHistory struct {
 	histories     map[string][]string
+
+	// TODO: move selectIndex and related functionality out of the service and into
+	//       its own type
 	selectedIndex map[string]int
 }
 
 var inputHistoryInstance *inputHistory
+
 func InputHistory() *inputHistory {
 	if inputHistoryInstance == nil {
 		inputHistoryInstance = &inputHistory{
@@ -123,7 +127,7 @@ func (h *inputHistory) RemoveSlice(prompt string, lower, upper int) error {
 	currentIndex := h.selectedIndex[prompt]
 
 	// Remove the slice (inclusive)
-	newHistory := slices.Delete(history, lower, upper + 1)
+	newHistory := slices.Delete(history, lower, upper+1)
 	h.histories[prompt] = newHistory
 
 	// Adjust selection index

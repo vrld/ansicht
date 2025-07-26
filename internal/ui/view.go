@@ -23,8 +23,8 @@ func (m *Model) setLayoutDimension(width, height int) {
 	m.width = width
 	m.height = height
 	m.list.SetHeight(1)
-	m.list.SetWidth(width-2)
-	m.list.SetDelegate(MessageDelegate{width-2})
+	m.list.SetWidth(width - 2)
+	m.list.SetDelegate(MessageDelegate{width - 2})
 }
 
 // TABS
@@ -111,7 +111,7 @@ var (
 )
 
 func (m *Model) renderMails(listHeight int) string {
-	m.list.Styles.NoItems = styleListNoItems.Width(m.width-2).Height(listHeight-1)
+	m.list.Styles.NoItems = styleListNoItems.Width(m.width - 2).Height(listHeight - 1)
 	m.list.SetHeight(listHeight - 1)
 	return mailsStyle.Render(m.list.View())
 }

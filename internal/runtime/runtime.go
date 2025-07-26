@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	_ "embed"
 
@@ -90,6 +91,14 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 		{Name: "clear", Function: runtime.luaMarksClear},
 	})
 	L.SetField(-2, "marks")
+
+	// log.<level>(message)  =>  real-log(LEVEL, message)
+	lua.NewLibrary(L, []lua.RegistryFunction{
+		{Name: "__index", Function: runtime.luaLogMetatableIndex},
+	})
+	L.PushValue(-1)
+	L.SetMetaTable(-2)
+	L.SetField(-2, "log")
 
 	L.SetGlobal("ansicht")
 
@@ -194,4 +203,31 @@ func luaNotmuchTag(L *lua.State) int {
 func (r *Runtime) luaStatusGet(L *lua.State) int {
 	L.PushString(service.Status().Get())
 	return 1
+}
+
+// returns closure that calls log()
+// meant to be used as __index function
+// effectively:
+// ansicht.log.__index = function(_, level)
+//   return function(message) log(level, message) end
+// end
+func (r *Runtime) luaLogMetatableIndex(L *lua.State) int {
+	if key, ok := L.ToString(2); ok {
+		key = strings.ToUpper(key)
+		L.PushString(key)
+		L.PushGoClosure(r.luaLogMessage, 1)
+		return 1
+	}
+
+	service.Logger().Error("luaLogMetatableIndex: not a string")
+	lua.Errorf(L, "what are you doing?")
+	panic("unreachable")
+}
+
+// clearly better than defining separate functions
+func (r *Runtime) luaLogMessage(L *lua.State) int {
+	level, _ := L.ToString(lua.UpValueIndex(1))
+	message, _ := lua.ToStringMeta(L, 1)
+	service.Logger().Log(service.LogLevel(level), message)
+	return 0
 }

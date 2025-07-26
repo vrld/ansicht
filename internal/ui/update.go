@@ -17,6 +17,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.QueryString == m.currentQueryString {
 			m.isLoading = false
 			if msg.Error != nil {
+				service.Logger().Error(msg.Error.Error())
 				// TODO: Show error in UI
 				return m, nil
 			}

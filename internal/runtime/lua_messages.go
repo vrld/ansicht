@@ -6,17 +6,6 @@ import (
 	"github.com/vrld/ansicht/internal/service"
 )
 
-// returns message[field] where message is the message table at `index` on the stack
-// converts objects to string according to Lua rules
-func getMessageField(L *lua.State, index int, field string) (string, bool) {
-	if !isMessage(L, index) {
-		return "", false
-	}
-
-	value := lFieldString(L, index, field)
-	return value, value != ""
-}
-
 // put all messages on the stack
 func (r *Runtime) luaMessagesAll(L *lua.State) int {
 	pushMessagesTable(L, service.Messages().GetAll())
@@ -33,15 +22,6 @@ func (r *Runtime) luaMessagesSelected(L *lua.State) int {
 func (r *Runtime) luaMessagesMarked(L *lua.State) int {
 	pushMessagesTable(L, service.Messages().GetMarked())
 	return 1
-}
-
-// pushes a table of messages on the stack
-func pushMessagesTable(L *lua.State, messages []*model.Message) {
-	L.CreateTable(len(messages), 0)
-	for i, msg := range messages {
-		pushMessage(L, msg)
-		L.RawSetInt(-2, i+1)
-	}
 }
 
 // pushes a single message on the stack:
@@ -70,12 +50,25 @@ func isMessage(L *lua.State, index int) bool {
 		return false
 	}
 
-	// leave a tidy stack
-	top := L.Top()
-	defer L.SetTop(top)
-
-	name := lFieldString(L, index, "__type")
+	name, _ := lFieldString(L, index, "__type")
 	return name == LUA_TYPE_ID_MESSAGE
+}
 
-	return false
+// pushes a table of messages on the stack
+func pushMessagesTable(L *lua.State, messages []*model.Message) {
+	L.CreateTable(len(messages), 0)
+	for i, msg := range messages {
+		pushMessage(L, msg)
+		L.RawSetInt(-2, i+1)
+	}
+}
+
+// returns message[field] where message is the message table at `index` on the stack
+// converts objects to string according to Lua rules
+func getMessageField(L *lua.State, index int, field string) (string, bool) {
+	if !isMessage(L, index) {
+		return "", false
+	}
+
+	return lFieldString(L, index, field)
 }

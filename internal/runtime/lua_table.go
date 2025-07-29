@@ -2,14 +2,6 @@ package runtime
 
 import "github.com/Shopify/go-lua"
 
-func lFieldStringOrNil(L *lua.State, index int, key string) {
-	L.Field(index, key)
-	if !(L.IsString(-1) || L.IsNil(-1)) {
-		lua.Errorf(L, "%s must be a string or nil", key)
-		panic("unreachable")
-	}
-}
-
 func lFieldFunctionOrNil(L *lua.State, index int, key string) {
 	L.Field(index, key)
 	if !(L.IsFunction(-1) || L.IsNil(-1)) {
@@ -66,24 +58,18 @@ func lPushStringTable(L *lua.State, slice []string) {
 	}
 }
 
-// lFieldString gets a string field from a Lua table and returns it
-func lFieldString(L *lua.State, index int, key string) string {
+func lFieldString(L *lua.State, index int, key string) (string, bool) {
 	L.Field(index, key)
+	defer L.Pop(1)
 	if value, ok := L.ToString(-1); ok {
-		L.Pop(1)
-		return value
+		return value, ok
 	}
-	L.Pop(1)
-	return ""
+	return "", false
 }
 
-// lFieldStringOrDefault gets a string field from a Lua table, returning defaultValue if not found or not a string
-func lFieldStringOrDefault(L *lua.State, index int, key string, defaultValue string) string {
-	L.Field(index, key)
-	if value, ok := L.ToString(-1); ok {
-		L.Pop(1)
+func lFieldStringOrDefault(L *lua.State, index int, key string, defaultValue string) string  {
+	if value, ok := lFieldString(L, index, key); ok {
 		return value
 	}
-	L.Pop(1)
 	return defaultValue
 }

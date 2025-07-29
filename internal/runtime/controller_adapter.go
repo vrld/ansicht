@@ -8,6 +8,7 @@ type ControllerAdapter interface {
 	Status(message string)
 	Input(prompt, placeholder string)
 	SpawnResult(result SpawnResult)
+	SetTheme(theme any)
 
 	QueryNew(query string)
 	QuerySelectNext()
@@ -16,8 +17,6 @@ type ControllerAdapter interface {
 	MarksToggle()
 	MarksInvert()
 	MarksClear()
-
-	SetTheme(theme interface{})
 }
 
 type NullAdapter struct{}
@@ -27,15 +26,15 @@ func (a *NullAdapter) Refresh()                {}
 func (a *NullAdapter) Status(string)           {}
 func (a *NullAdapter) Input(string, string)    {}
 func (a *NullAdapter) SpawnResult(SpawnResult) {}
+func (a *NullAdapter) SetTheme(any)            {}
 
 func (a *NullAdapter) QueryNew(string)  {}
 func (a *NullAdapter) QuerySelectNext() {}
 func (a *NullAdapter) QuerySelectPrev() {}
 
-func (a *NullAdapter) MarksToggle()         {}
-func (a *NullAdapter) MarksInvert()         {}
-func (a *NullAdapter) MarksClear()          {}
-func (a *NullAdapter) SetTheme(interface{}) {}
+func (a *NullAdapter) MarksToggle() {}
+func (a *NullAdapter) MarksInvert() {}
+func (a *NullAdapter) MarksClear()  {}
 
 func (r *Runtime) luaQuit(L *lua.State) int {
 	r.Controller.Quit()

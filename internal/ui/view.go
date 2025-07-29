@@ -14,6 +14,10 @@ func borderColor() lipgloss.Color {
 	return lipgloss.Color(colorMuted)
 }
 
+func bgColor() lipgloss.Color {
+	return lipgloss.Color(colorBackground)
+}
+
 func (m Model) View() string {
 	tabs := m.renderTabs()
 	status := m.renderStatusLine()
@@ -75,6 +79,8 @@ func (s BorderTabStyle) lipgloss() lipgloss.Style {
 	style := lipgloss.NewStyle().
 		Border(border, true).
 		BorderForeground(borderColor()).
+		BorderBackground(bgColor()).
+		Background(bgColor()).
 		Padding(0, 1)
 
 	if s.Active {
@@ -100,7 +106,10 @@ func (m *Model) renderTabs() string {
 
 	gap := BorderTabStyle{Gap: true}.lipgloss().
 		BorderLeft(false).BorderTop(false).
-		Render(strings.Repeat(" ", max(0, m.width-tabWidth-3)))
+		Render(
+			strings.Repeat(" ", max(0, m.width-tabWidth-3)) + "\n" +
+			strings.Repeat(" ", max(0, m.width-tabWidth-3)),
+		)
 
 	return lipgloss.JoinHorizontal(lipgloss.Bottom, tabRow, gap)
 }
@@ -110,7 +119,7 @@ func (m *Model) renderTabs() string {
 var mailsBorder = lipgloss.Border{Left: "│", Right: "│", Bottom: "─", BottomLeft: "└", BottomRight: "┘"}
 
 func mailsStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Border(mailsBorder, false, true, true, true).BorderForeground(borderColor())
+	return lipgloss.NewStyle().Border(mailsBorder, false, true, true, true).BorderForeground(borderColor()).BorderBackground(bgColor()).Background(bgColor())
 }
 
 func (m *Model) renderMails(listHeight int) string {

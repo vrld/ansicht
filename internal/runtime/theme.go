@@ -1,10 +1,7 @@
 package runtime
 
-import (
-	lua "github.com/Shopify/go-lua"
-)
+import lua "github.com/Shopify/go-lua"
 
-// ThemeData represents theme color values to pass to UI without import cycle
 type ThemeData struct {
 	Background      string
 	Muted           string
@@ -18,16 +15,14 @@ type ThemeData struct {
 	TertiaryBright  string
 }
 
-// luaSetTheme implements ansicht.set_theme() function
-// Expects a Lua table with theme color fields
-func (r *Runtime) luaSetTheme(L *lua.State) int {
+// ansicht.theme.set{ ... }
+func (r *Runtime) luaThemeSet(L *lua.State) int {
 	if !L.IsTable(1) {
 		lua.Errorf(L, "set_theme expects a table")
 		panic("unreachable")
 	}
 
-	// Parse theme fields from Lua table with defaults
-	theme := ThemeData{
+	r.Controller.SetTheme(ThemeData{
 		Background:      lFieldStringOrDefault(L, 1, "background", "0"),
 		Muted:           lFieldStringOrDefault(L, 1, "muted", "8"),
 		Foreground:      lFieldStringOrDefault(L, 1, "foreground", "7"),
@@ -38,8 +33,6 @@ func (r *Runtime) luaSetTheme(L *lua.State) int {
 		AccentBright:    lFieldStringOrDefault(L, 1, "accent_bright", "11"),
 		SecondaryBright: lFieldStringOrDefault(L, 1, "secondary_bright", "12"),
 		TertiaryBright:  lFieldStringOrDefault(L, 1, "tertiary_bright", "14"),
-	}
-
-	r.Controller.SetTheme(theme)
+	})
 	return 0
 }

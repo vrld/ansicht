@@ -59,7 +59,6 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 		{Name: "spawn", Function: runtime.luaSpawn},
 		{Name: "tag", Function: luaNotmuchTag},
 		{Name: "input", Function: runtime.luaInput},
-		{Name: "set_theme", Function: runtime.luaSetTheme},
 	})
 
 	// status
@@ -68,6 +67,12 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 		{Name: "get", Function: runtime.luaStatusGet},
 	})
 	L.SetField(-2, "status")
+
+	// theme
+	lua.NewLibrary(L, []lua.RegistryFunction{
+		{Name: "set", Function: runtime.luaThemeSet},
+	})
+	L.SetField(-2, "theme")
 
 	// messages access
 	lua.NewLibrary(L, []lua.RegistryFunction{

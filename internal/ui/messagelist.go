@@ -48,7 +48,7 @@ type MessageDelegate struct {
 	width int
 }
 
-type MessageStyles struct {
+type messageStyles struct {
 	Date      lipgloss.Style
 	Sender    lipgloss.Style
 	Arrow     lipgloss.Style
@@ -57,30 +57,42 @@ type MessageStyles struct {
 	Tags      lipgloss.Style
 }
 
-func (s MessageStyles) Apply(what func(lipgloss.Style) lipgloss.Style) MessageStyles {
-	s.Date = what(s.Date)
-	s.Sender = what(s.Sender)
-	s.Arrow = what(s.Arrow)
-	s.Recipient = what(s.Recipient)
-	s.Subject = what(s.Subject)
-	s.Tags = what(s.Tags)
-	return s
+func (s messageStyles) withForeground(color lipgloss.Color) messageStyles {
+	return messageStyles{
+		Date:      s.Date.Foreground(color),
+		Sender:    s.Sender.Foreground(color),
+		Arrow:     s.Arrow.Foreground(color),
+		Recipient: s.Recipient.Foreground(color),
+		Subject:   s.Subject.Foreground(color),
+		Tags:      s.Tags.Foreground(color),
+	}
 }
 
-var (
-	messageStylesUnread = MessageStyles{
+func (s messageStyles) withBackground(color lipgloss.Color) messageStyles {
+	return messageStyles{
+		Date:      s.Date.Background(color),
+		Sender:    s.Sender.Background(color),
+		Arrow:     s.Arrow.Background(color),
+		Recipient: s.Recipient.Background(color),
+		Subject:   s.Subject.Background(color),
+		Tags:      s.Tags.Background(color),
+	}
+}
+
+func messageStylesUnread() messageStyles {
+	return messageStyles{
 		Date:      lipgloss.NewStyle().Foreground(lipgloss.Color(colorTertiary)),
 		Sender:    lipgloss.NewStyle().Foreground(lipgloss.Color(colorAccent)),
 		Arrow:     lipgloss.NewStyle().Foreground(lipgloss.Color(colorMuted)),
 		Recipient: lipgloss.NewStyle().Foreground(lipgloss.Color(colorSecondary)),
 		Subject:   lipgloss.NewStyle().Foreground(lipgloss.Color(colorHighlight)),
 		Tags:      lipgloss.NewStyle().Foreground(lipgloss.Color(colorTertiary)),
-	}
+	}.withBackground(lipgloss.Color(colorBackground))
+}
 
-	messageStylesSeen = messageStylesUnread.Apply(func(s lipgloss.Style) lipgloss.Style {
-		return s.Foreground(lipgloss.Color(colorMuted))
-	})
-)
+func messageStylesSeen() messageStyles {
+	return messageStylesUnread().withForeground(lipgloss.Color(colorMuted))
+}
 
 // Render renders a list item
 func (d MessageDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
@@ -89,23 +101,21 @@ func (d MessageDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 		return
 	}
 
-	styles := messageStylesUnread
+	var styles messageStyles
 	if item.Message.Flags.Seen {
-		styles = messageStylesSeen
+		styles = messageStylesSeen()
+	} else {
+		styles = messageStylesUnread()
 	}
 
 	if index == m.Index() {
-		bg := lipgloss.Color(colorSecondaryBright)
-		fg := lipgloss.Color(colorBackground)
-		styles = styles.Apply(func(s lipgloss.Style) lipgloss.Style {
-			return s.Background(bg).Foreground(fg)
-		})
+		styles = styles.
+			withForeground(lipgloss.Color(colorBackground)).
+			withBackground(lipgloss.Color(colorSecondaryBright))
 	} else if item.Marked {
-		bg := lipgloss.Color(colorTertiaryBright)
-		fg := lipgloss.Color(colorBackground)
-		styles = styles.Apply(func(s lipgloss.Style) lipgloss.Style {
-			return s.Background(bg).Foreground(fg)
-		})
+		styles = styles.
+			withForeground(lipgloss.Color(colorTertiaryBright)).
+			withBackground(lipgloss.Color(colorBackground))
 	}
 
 	line := d.renderLine(item, styles)
@@ -113,7 +123,7 @@ func (d MessageDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 	fmt.Fprint(w, line)
 }
 
-func (d MessageDelegate) renderLine(item MessageItem, styles MessageStyles) string {
+func (d MessageDelegate) renderLine(item MessageItem, styles messageStyles) string {
 	date := fmt.Sprintf("%11s  ", formatDate(item.Message.Date))
 	sender := fmt.Sprintf("%20s", truncate(formatEmailAddress(item.Message.From), 20)) // TODO: use only name (Sander <s@nd.er> => Sander)
 	arrow := " → "

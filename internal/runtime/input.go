@@ -17,11 +17,8 @@ func (r *Runtime) luaInput(L *lua.State) int {
 		panic("unreachable")
 	}
 
-	lFieldStringOrNil(L, 1, "placeholder")
-	placeholder, _ := L.ToString(-1)
-
-	lFieldStringOrNil(L, 1, "prompt")
-	prompt, _ := L.ToString(-1)
+	placeholder := lFieldString(L, 1, "placeholder")
+	prompt := lFieldString(L, 1, "prompt")
 
 	r.countOpenInputs++
 	L.PushString(inputCallbackHandleString(r.countOpenInputs))

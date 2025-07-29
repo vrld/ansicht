@@ -1,9 +1,7 @@
 package ui
 
-import "github.com/charmbracelet/lipgloss"
-
-// Coherent color palette
-const (
+// Coherent color palette - mutable variables for theme support
+var (
 	// Base colors
 	colorBackground = "0"
 	colorMuted      = "8"
@@ -17,20 +15,4 @@ const (
 	colorAccentBright    = "11"
 	colorSecondaryBright = "12"
 	colorTertiaryBright  = "14"
-)
-
-// styleTabNormal defines the styling for tabs
-var (
-	styleSpinner = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(colorAccent))
-
-	styleListNoItems = lipgloss.NewStyle().
-				Bold(true).
-				Align(lipgloss.Center, lipgloss.Center)
-
-	styleStatusLine = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(colorBackground)).
-			Background(lipgloss.Color(colorSecondary)).
-			Padding(0, 1).
-			Bold(true)
 )

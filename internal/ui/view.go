@@ -10,7 +10,9 @@ import (
 	"github.com/vrld/ansicht/internal/service"
 )
 
-var borderColor = lipgloss.Color(colorMuted)
+func borderColor() lipgloss.Color {
+	return lipgloss.Color(colorMuted)
+}
 
 func (m Model) View() string {
 	tabs := m.renderTabs()
@@ -72,7 +74,7 @@ func (s BorderTabStyle) lipgloss() lipgloss.Style {
 
 	style := lipgloss.NewStyle().
 		Border(border, true).
-		BorderForeground(borderColor).
+		BorderForeground(borderColor()).
 		Padding(0, 1)
 
 	if s.Active {
@@ -105,15 +107,16 @@ func (m *Model) renderTabs() string {
 
 // MAILS
 
-var (
-	mailsBorder = lipgloss.Border{Left: "│", Right: "│", Bottom: "─", BottomLeft: "└", BottomRight: "┘"}
-	mailsStyle  = lipgloss.NewStyle().Border(mailsBorder, false, true, true, true).BorderForeground(borderColor)
-)
+var mailsBorder = lipgloss.Border{Left: "│", Right: "│", Bottom: "─", BottomLeft: "└", BottomRight: "┘"}
+
+func mailsStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Border(mailsBorder, false, true, true, true).BorderForeground(borderColor())
+}
 
 func (m *Model) renderMails(listHeight int) string {
-	m.list.Styles.NoItems = styleListNoItems.Width(m.width - 2).Height(listHeight - 1)
+	m.list.Styles.NoItems = lipgloss.NewStyle().Bold(true).Align(lipgloss.Center, lipgloss.Center).Width(m.width - 2).Height(listHeight - 1)
 	m.list.SetHeight(listHeight - 1)
-	return mailsStyle.Render(m.list.View())
+	return mailsStyle().Render(m.list.View())
 }
 
 // STATUS LINE
@@ -139,5 +142,10 @@ func (m *Model) renderStatusLine() string {
 	spacing := max(m.width-5-utf8.RuneCountInString(service.Status().Get())-utf8.RuneCountInString(rightStatus), 1)
 
 	statusText := service.Status().Get() + strings.Repeat(" ", spacing) + rightStatus
-	return styleStatusLine.Render(statusText)
+	return lipgloss.NewStyle().
+		Foreground(lipgloss.Color(colorBackground)).
+		Background(lipgloss.Color(colorSecondary)).
+		Padding(0, 1).
+		Bold(true).
+		Render(statusText)
 }

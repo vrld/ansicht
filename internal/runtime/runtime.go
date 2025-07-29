@@ -59,6 +59,7 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 		{Name: "spawn", Function: runtime.luaSpawn},
 		{Name: "tag", Function: luaNotmuchTag},
 		{Name: "input", Function: runtime.luaInput},
+		{Name: "set_theme", Function: runtime.luaSetTheme},
 	})
 
 	// status
@@ -209,7 +210,9 @@ func (r *Runtime) luaStatusGet(L *lua.State) int {
 // meant to be used as __index function
 // effectively:
 // ansicht.log.__index = function(_, level)
-//   return function(message) log(level, message) end
+//
+//	return function(message) log(level, message) end
+//
 // end
 func (r *Runtime) luaLogMetatableIndex(L *lua.State) int {
 	if key, ok := L.ToString(2); ok {

@@ -11,10 +11,10 @@ import (
 type LogLevel string
 
 const (
-	LogLevelDebug LogLevel = "DEBUG"
-	LogLevelInfo  LogLevel = "INFO"
-	logLevelWarning  LogLevel = "WARNING"
-	LogLevelError LogLevel = "ERROR"
+	LogLevelDebug   LogLevel = "DEBUG"
+	LogLevelInfo    LogLevel = "INFO"
+	logLevelWarning LogLevel = "WARNING"
+	LogLevelError   LogLevel = "ERROR"
 )
 
 type logger struct {

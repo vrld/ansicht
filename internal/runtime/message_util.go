@@ -13,11 +13,8 @@ func getMessageField(L *lua.State, index int, field string) (string, bool) {
 		return "", false
 	}
 
-	L.Field(index, field)
-	value, ok := L.ToString(-1)
-	L.Pop(1)
-
-	return value, ok
+	value := lFieldString(L, index, field)
+	return value, value != ""
 }
 
 // put all messages on the stack
@@ -77,10 +74,8 @@ func isMessage(L *lua.State, index int) bool {
 	top := L.Top()
 	defer L.SetTop(top)
 
-	L.Field(index, "__type")
-	if name, ok := L.ToString(-1); ok {
-		return name == LUA_TYPE_ID_MESSAGE
-	}
+	name := lFieldString(L, index, "__type")
+	return name == LUA_TYPE_ID_MESSAGE
 
 	return false
 }

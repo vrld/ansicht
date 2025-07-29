@@ -65,3 +65,25 @@ func lPushStringTable(L *lua.State, slice []string) {
 		L.RawSetInt(-2, i+1)
 	}
 }
+
+// lFieldString gets a string field from a Lua table and returns it
+func lFieldString(L *lua.State, index int, key string) string {
+	L.Field(index, key)
+	if value, ok := L.ToString(-1); ok {
+		L.Pop(1)
+		return value
+	}
+	L.Pop(1)
+	return ""
+}
+
+// lFieldStringOrDefault gets a string field from a Lua table, returning defaultValue if not found or not a string
+func lFieldStringOrDefault(L *lua.State, index int, key string, defaultValue string) string {
+	L.Field(index, key)
+	if value, ok := L.ToString(-1); ok {
+		L.Pop(1)
+		return value
+	}
+	L.Pop(1)
+	return defaultValue
+}

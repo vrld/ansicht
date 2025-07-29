@@ -16,6 +16,8 @@ type ControllerAdapter interface {
 	MarksToggle()
 	MarksInvert()
 	MarksClear()
+
+	SetTheme(theme interface{})
 }
 
 type NullAdapter struct{}
@@ -30,9 +32,10 @@ func (a *NullAdapter) QueryNew(string)  {}
 func (a *NullAdapter) QuerySelectNext() {}
 func (a *NullAdapter) QuerySelectPrev() {}
 
-func (a *NullAdapter) MarksToggle() {}
-func (a *NullAdapter) MarksInvert() {}
-func (a *NullAdapter) MarksClear()  {}
+func (a *NullAdapter) MarksToggle()         {}
+func (a *NullAdapter) MarksInvert()         {}
+func (a *NullAdapter) MarksClear()          {}
+func (a *NullAdapter) SetTheme(interface{}) {}
 
 func (r *Runtime) luaQuit(L *lua.State) int {
 	r.Controller.Quit()

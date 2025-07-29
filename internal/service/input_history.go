@@ -5,7 +5,7 @@ import "slices"
 import "fmt"
 
 type inputHistory struct {
-	histories     map[string][]string
+	histories map[string][]string
 
 	// TODO: move selectIndex and related functionality out of the service and into
 	//       its own type

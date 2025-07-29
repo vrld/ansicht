@@ -59,6 +59,10 @@
 - Tab completion on input
   - tab completes to the most recent input with the current input as prefix
 
-- change list component:
+- Responsive list item renderer
+  - Should omit recipient if line is too narrow
+  - May break over multiple lines
+
+- Refactor use of list item component
   - expose movement to runtime as events
   - find a way to update Marked state that does not require a re-fill of the list

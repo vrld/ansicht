@@ -36,3 +36,9 @@
 - `internal/ui/`: User interface components (Bubble Tea)
 - `internal/runtime/`: Configuration and Lua runtime
 - `internal/db/`: Database/notmuch integration
+
+## Architecture Principles
+- **Services are for core logic only**: Services should handle business logic and data management. UI-specific concerns (like themes, colors, styling) belong in the UI layer, not services.
+- **Avoid unnecessary complexity**: Use existing structures and patterns rather than creating new complex systems. Simple solutions are preferred.
+- **UI concerns stay in UI**: Color themes, styling, and other presentation logic should remain in the `internal/ui/` package.
+- **Runtime integration via existing patterns**: Use the established `ControllerAdapter` interface pattern for runtime-to-UI communication.

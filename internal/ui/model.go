@@ -48,7 +48,7 @@ func NewModel(runtime RuntimeInterface) *Model {
 	// loading indicator
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
-	sp.Style = styleSpinner
+	sp.Style = lipgloss.NewStyle().Foreground(lipgloss.Color(colorAccent))
 
 	// Default width (will be updated on WindowSizeMsg)
 	defaultWidth := 96
@@ -64,7 +64,7 @@ func NewModel(runtime RuntimeInterface) *Model {
 
 	// Style the list
 	messageList.Styles = list.DefaultStyles()
-	messageList.Styles.NoItems = styleListNoItems
+	messageList.Styles.NoItems = lipgloss.NewStyle().Bold(true).Align(lipgloss.Center, lipgloss.Center)
 
 	return &Model{
 		runtime:    runtime,

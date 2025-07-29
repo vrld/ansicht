@@ -57,3 +57,23 @@ func (a *RuntimeAdapter) MarksInvert() {
 func (a *RuntimeAdapter) MarksClear() {
 	go a.Program.Send(MarksClearMsg{})
 }
+
+func (a *RuntimeAdapter) SetTheme(theme interface{}) {
+	// Convert runtime.ThemeData to ui.Theme using type assertion
+	// This works because runtime.ThemeData has the same field structure as ui.Theme
+	if themeData, ok := theme.(runtime.ThemeData); ok {
+		SetTheme(Theme{
+			Background:      themeData.Background,
+			Muted:           themeData.Muted,
+			Foreground:      themeData.Foreground,
+			Highlight:       themeData.Highlight,
+			Accent:          themeData.Accent,
+			Secondary:       themeData.Secondary,
+			Tertiary:        themeData.Tertiary,
+			AccentBright:    themeData.AccentBright,
+			SecondaryBright: themeData.SecondaryBright,
+			TertiaryBright:  themeData.TertiaryBright,
+		})
+		go a.Program.Send("theme_updated") // trigger redraw
+	}
+}

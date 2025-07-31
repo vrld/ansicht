@@ -35,6 +35,8 @@ type Model struct {
 	spinner            spinner.Model
 	width              int
 	height             int
+	notifications      []Notification
+	originalStatus     string
 }
 
 func NewModel(runtime RuntimeInterface) *Model {
@@ -67,12 +69,13 @@ func NewModel(runtime RuntimeInterface) *Model {
 	messageList.Styles.NoItems = lipgloss.NewStyle().Bold(true).Align(lipgloss.Center, lipgloss.Center)
 
 	return &Model{
-		runtime:    runtime,
-		focusInput: false,
-		input:      ti,
-		list:       messageList,
-		spinner:    sp,
-		width:      defaultWidth,
+		runtime:       runtime,
+		focusInput:    false,
+		input:         ti,
+		list:          messageList,
+		spinner:       sp,
+		width:         defaultWidth,
+		notifications: make([]Notification, 0),
 	}
 }
 

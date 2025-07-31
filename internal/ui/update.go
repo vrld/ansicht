@@ -81,6 +81,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.runtime.HandleSpawnResult(msg)
 		return m, nil
 
+	case NotificationExpiredMsg:
+		m.RemoveExpiredNotification(msg.Notification)
+		return m, nil
+
+	case NotifyMsg:
+		severity := parseNotificationSeverity(msg.Level)
+		cmd := m.AddNotification(msg.Message, severity, msg.Timeout)
+		return m, cmd
+
 	// key presses
 	case tea.KeyMsg:
 		if m.focusInput {

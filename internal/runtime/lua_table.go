@@ -67,9 +67,18 @@ func lFieldString(L *lua.State, index int, key string) (string, bool) {
 	return "", false
 }
 
-func lFieldStringOrDefault(L *lua.State, index int, key string, defaultValue string) string  {
+func lFieldStringOrDefault(L *lua.State, index int, key string, defaultValue string) string {
 	if value, ok := lFieldString(L, index, key); ok {
 		return value
 	}
 	return defaultValue
+}
+
+func lFieldNumber(L *lua.State, index int, key string) (float64, bool) {
+	L.Field(index, key)
+	defer L.Pop(1)
+	if value, ok := L.ToNumber(-1); ok {
+		return value, ok
+	}
+	return 0, false
 }

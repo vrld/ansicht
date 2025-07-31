@@ -6,6 +6,7 @@ type ControllerAdapter interface {
 	Quit()
 	Refresh()
 	Status(message string)
+	Notify(message string, level string, timeout int)
 	Input(prompt, placeholder string)
 	SpawnResult(result SpawnResult)
 	SetTheme(theme any)
@@ -21,12 +22,13 @@ type ControllerAdapter interface {
 
 type NullAdapter struct{}
 
-func (a *NullAdapter) Quit()                   {}
-func (a *NullAdapter) Refresh()                {}
-func (a *NullAdapter) Status(string)           {}
-func (a *NullAdapter) Input(string, string)    {}
-func (a *NullAdapter) SpawnResult(SpawnResult) {}
-func (a *NullAdapter) SetTheme(any)            {}
+func (a *NullAdapter) Quit()                      {}
+func (a *NullAdapter) Refresh()                   {}
+func (a *NullAdapter) Status(string)              {}
+func (a *NullAdapter) Notify(string, string, int) {}
+func (a *NullAdapter) Input(string, string)       {}
+func (a *NullAdapter) SpawnResult(SpawnResult)    {}
+func (a *NullAdapter) SetTheme(any)               {}
 
 func (a *NullAdapter) QueryNew(string)  {}
 func (a *NullAdapter) QuerySelectNext() {}
@@ -81,5 +83,28 @@ func (r *Runtime) luaMarksInvert(L *lua.State) int {
 
 func (r *Runtime) luaMarksClear(L *lua.State) int {
 	r.Controller.MarksClear()
+	return 0
+}
+
+func (r *Runtime) luaNotify(L *lua.State) int {
+	// ansicht.notify{message="hello", level="warning", timeout=10}
+
+	if !L.IsTable(1) {
+		lua.Errorf(L, "ansicht.notify expects a table argument")
+		panic("unreachable")
+	}
+
+	message, _ := lFieldString(L, 1, "message")
+	level := lFieldStringOrDefault(L, 1, "level", "info")
+
+	timeout := 0
+	if to, ok := lFieldNumber(L, 1, "timeout"); ok {
+		timeout = int(to)
+	}
+
+	if message != "" {
+		r.Controller.Notify(message, level, timeout)
+	}
+
 	return 0
 }

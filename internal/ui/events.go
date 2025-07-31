@@ -20,3 +20,9 @@ type OpenInputEvent struct {
 	Prompt      string
 	Placeholder string
 }
+
+type NotifyMsg struct {
+	Message string
+	Level   string
+	Timeout int
+}

@@ -23,6 +23,14 @@ func (a *RuntimeAdapter) Status(message string) {
 	go a.Program.Send(message) // unhandled, but causes a redraw
 }
 
+func (a *RuntimeAdapter) Notify(message string, level string, timeout int) {
+	go a.Program.Send(NotifyMsg{
+		Message: message,
+		Level:   level,
+		Timeout: timeout,
+	})
+}
+
 func (a *RuntimeAdapter) Input(prompt, placeholder string) {
 	go a.Program.Send(OpenInputEvent{
 		Placeholder: placeholder,

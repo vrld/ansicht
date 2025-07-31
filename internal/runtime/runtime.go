@@ -59,6 +59,7 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 		{Name: "spawn", Function: runtime.luaSpawn},
 		{Name: "tag", Function: luaNotmuchTag},
 		{Name: "input", Function: runtime.luaInput},
+		{Name: "notify", Function: runtime.luaNotify},
 	})
 
 	// status

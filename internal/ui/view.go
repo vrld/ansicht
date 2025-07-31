@@ -108,7 +108,7 @@ func (m *Model) renderTabs() string {
 		BorderLeft(false).BorderTop(false).
 		Render(
 			strings.Repeat(" ", max(0, m.width-tabWidth-3)) + "\n" +
-			strings.Repeat(" ", max(0, m.width-tabWidth-3)),
+				strings.Repeat(" ", max(0, m.width-tabWidth-3)),
 		)
 
 	return lipgloss.JoinHorizontal(lipgloss.Bottom, tabRow, gap)
@@ -147,14 +147,35 @@ func (m *Model) renderStatusLine() string {
 	}
 	rightStatus = fmt.Sprintf("👀 %s ｢%s｣", rightStatus, time.Now().Format("15:04"))
 
-	// Calculate spacing to right-align the time
-	spacing := max(m.width-5-utf8.RuneCountInString(service.Status().Get())-utf8.RuneCountInString(rightStatus), 1)
+	// Get the status message to display (notification or original status)
+	var statusMessage string
+	var statusMessageStyle lipgloss.Style
 
-	statusText := service.Status().Get() + strings.Repeat(" ", spacing) + rightStatus
+	if notification := m.GetCurrentNotification(); notification != nil {
+		statusMessage = notification.Message
+		statusMessageStyle = m.getNotificationStyle(notification.Severity)
+	} else {
+		// Restore original status if no notifications, otherwise use current status
+		if len(m.notifications) == 0 {
+			statusMessage = service.Status().Get()
+		} else {
+			statusMessage = m.originalStatus
+		}
+		statusMessageStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(colorBackground))
+	}
+
+	// Calculate spacing to right-align the time
+	spacing := max(m.width-5-utf8.RuneCountInString(statusMessage)-utf8.RuneCountInString(rightStatus), 1)
+
+	// Style the status message and right status separately
+	styledStatusMessage := statusMessageStyle.Render(statusMessage)
+	styledRightStatus := lipgloss.NewStyle().Foreground(lipgloss.Color(colorBackground)).Render(rightStatus)
+
+	// Combine with spacing and apply background/padding to the whole line
+	statusText := styledStatusMessage + strings.Repeat(" ", spacing) + styledRightStatus
 	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color(colorBackground)).
 		Background(lipgloss.Color(colorSecondary)).
-		Padding(0, 1).
 		Bold(true).
+		Padding(0, 1).
 		Render(statusText)
 }

@@ -135,9 +135,17 @@ func (m *Model) renderStatusLine() string {
 		return " " + m.input.View()
 	}
 
+	// Get the status message to display (notification or original status)
+	leftStatus := service.Status().Get()
+	bgColor := lipgloss.Color(colorSecondaryBright)
+	if notification := m.GetCurrentNotification(); notification != nil {
+		leftStatus = notification.Message
+		bgColor = lipgloss.Color([]string{ colorSecondaryBright, colorWarning, colorError }[notification.Level]);
+	}
+
 	var rightStatus string
-	rightStatus = fmt.Sprintf("%s Searching...", m.spinner.View())
 	if m.isLoading {
+		rightStatus = fmt.Sprintf("%s Searching...", m.spinner.View())
 	} else if query, ok := service.Queries().Current(); ok {
 		markedCount := service.Messages().MarkedCount()
 		totalCount := service.Messages().Count()
@@ -147,35 +155,11 @@ func (m *Model) renderStatusLine() string {
 	}
 	rightStatus = fmt.Sprintf("👀 %s ｢%s｣", rightStatus, time.Now().Format("15:04"))
 
-	// Get the status message to display (notification or original status)
-	var statusMessage string
-	var statusMessageStyle lipgloss.Style
-
-	if notification := m.GetCurrentNotification(); notification != nil {
-		statusMessage = notification.Message
-		statusMessageStyle = m.getNotificationStyle(notification.Severity)
-	} else {
-		// Restore original status if no notifications, otherwise use current status
-		if len(m.notifications) == 0 {
-			statusMessage = service.Status().Get()
-		} else {
-			statusMessage = m.originalStatus
-		}
-		statusMessageStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(colorBackground))
-	}
-
-	// Calculate spacing to right-align the time
-	spacing := max(m.width-5-utf8.RuneCountInString(statusMessage)-utf8.RuneCountInString(rightStatus), 1)
-
-	// Style the status message and right status separately
-	styledStatusMessage := statusMessageStyle.Render(statusMessage)
-	styledRightStatus := lipgloss.NewStyle().Foreground(lipgloss.Color(colorBackground)).Render(rightStatus)
-
-	// Combine with spacing and apply background/padding to the whole line
-	statusText := styledStatusMessage + strings.Repeat(" ", spacing) + styledRightStatus
+	spacing := max(m.width-2-lipgloss.Width(leftStatus)-lipgloss.Width(rightStatus), 1)
 	return lipgloss.NewStyle().
-		Background(lipgloss.Color(colorSecondary)).
 		Bold(true).
+		Foreground(lipgloss.Color(colorBackground)).
+		Background(bgColor).
 		Padding(0, 1).
-		Render(statusText)
+		Render(leftStatus + strings.Repeat(" ", spacing) + rightStatus)
 }

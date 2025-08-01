@@ -13,6 +13,8 @@ type ThemeData struct {
 	AccentBright    string
 	SecondaryBright string
 	TertiaryBright  string
+	Warning         string
+	Error           string
 }
 
 // ansicht.theme.set{ ... }
@@ -33,6 +35,8 @@ func (r *Runtime) luaThemeSet(L *lua.State) int {
 		AccentBright:    lFieldStringOrDefault(L, 1, "accent_bright", "11"),
 		SecondaryBright: lFieldStringOrDefault(L, 1, "secondary_bright", "12"),
 		TertiaryBright:  lFieldStringOrDefault(L, 1, "tertiary_bright", "14"),
+		Warning:         lFieldStringOrDefault(L, 1, "warning", "13"),
+		Error:           lFieldStringOrDefault(L, 1, "error", "9"),
 	})
 	return 0
 }

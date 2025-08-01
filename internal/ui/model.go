@@ -36,7 +36,6 @@ type Model struct {
 	width              int
 	height             int
 	notifications      []Notification
-	originalStatus     string
 }
 
 func NewModel(runtime RuntimeInterface) *Model {

@@ -5,15 +5,13 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/vrld/ansicht/internal/service"
 )
 
 // Notification severity levels
-type NotificationSeverity int
+type NotificationLevel int
 
 const (
-	NotificationInfo NotificationSeverity = iota
+	NotificationInfo NotificationLevel = iota
 	NotificationWarning
 	NotificationError
 )
@@ -21,7 +19,7 @@ const (
 // Notification represents a temporary status message
 type Notification struct {
 	Message   string
-	Severity  NotificationSeverity
+	Level     NotificationLevel
 	Timestamp time.Time
 	ExpiresAt time.Time
 }
@@ -32,10 +30,10 @@ type NotificationExpiredMsg struct {
 }
 
 // AddNotification adds a notification with automatic timeout
-func (m *Model) AddNotification(message string, severity NotificationSeverity, timeoutSeconds int) tea.Cmd {
+func (m *Model) AddNotification(message string, level NotificationLevel, timeoutSeconds float64) tea.Cmd {
 	// Default timeouts based on severity
 	if timeoutSeconds <= 0 {
-		switch severity {
+		switch level {
 		case NotificationInfo:
 			timeoutSeconds = 5
 		case NotificationWarning:
@@ -46,47 +44,28 @@ func (m *Model) AddNotification(message string, severity NotificationSeverity, t
 	}
 
 	now := time.Now()
+	timeoutDuration := time.Duration(timeoutSeconds * 1000) * time.Millisecond
 	notification := Notification{
 		Message:   message,
-		Severity:  severity,
+		Level:     level,
 		Timestamp: now,
-		ExpiresAt: now.Add(time.Duration(timeoutSeconds) * time.Second),
+		ExpiresAt: now.Add(timeoutDuration),
 	}
 
-	// Store original status if this is the first notification
-	if len(m.notifications) == 0 {
-		m.originalStatus = m.getCurrentStatus()
-	}
-
-	// Remove any existing notification with the same severity (don't stack)
-	m.removeNotificationsBySeverity(severity)
-
-	// Add new notification
 	m.notifications = append(m.notifications, notification)
 
 	// Sort by priority (severity desc, then timestamp desc for recency)
 	sort.Slice(m.notifications, func(i, j int) bool {
-		if m.notifications[i].Severity != m.notifications[j].Severity {
-			return m.notifications[i].Severity > m.notifications[j].Severity
+		if m.notifications[i].Level != m.notifications[j].Level {
+			return m.notifications[i].Level > m.notifications[j].Level
 		}
 		return m.notifications[i].Timestamp.After(m.notifications[j].Timestamp)
 	})
 
 	// Return command to expire this notification
-	return tea.Tick(time.Duration(timeoutSeconds)*time.Second, func(t time.Time) tea.Msg {
+	return tea.Tick(timeoutDuration, func(t time.Time) tea.Msg {
 		return NotificationExpiredMsg{Notification: notification}
 	})
-}
-
-// removeNotificationsBySeverity removes all notifications with the given severity
-func (m *Model) removeNotificationsBySeverity(severity NotificationSeverity) {
-	filtered := make([]Notification, 0, len(m.notifications))
-	for _, n := range m.notifications {
-		if n.Severity != severity {
-			filtered = append(filtered, n)
-		}
-	}
-	m.notifications = filtered
 }
 
 // RemoveExpiredNotification removes a specific expired notification
@@ -110,33 +89,4 @@ func (m *Model) GetCurrentNotification() *Notification {
 		}
 	}
 	return nil
-}
-
-// getCurrentStatus gets the current status from the service
-func (m *Model) getCurrentStatus() string {
-	return service.Status().Get()
-}
-
-// parseNotificationSeverity converts string level to NotificationSeverity
-func parseNotificationSeverity(level string) NotificationSeverity {
-	switch level {
-	case "warning":
-		return NotificationWarning
-	case "error":
-		return NotificationError
-	default:
-		return NotificationInfo
-	}
-}
-
-// getNotificationStyle returns the appropriate foreground color style for a notification severity
-func (m *Model) getNotificationStyle(severity NotificationSeverity) lipgloss.Style {
-	switch severity {
-	case NotificationWarning:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorWarning))
-	case NotificationError:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorError))
-	default: // NotificationInfo
-		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorBackground))
-	}
 }

@@ -82,3 +82,10 @@ func lFieldNumber(L *lua.State, index int, key string) (float64, bool) {
 	}
 	return 0, false
 }
+
+func lFieldNumberOrDefault(L *lua.State, index int, key string, defaultValue float64) float64 {
+	if value, ok := lFieldNumber(L, index, key) ; ok {
+		return value
+	}
+	return defaultValue
+}

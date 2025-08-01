@@ -86,8 +86,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case NotifyMsg:
-		severity := parseNotificationSeverity(msg.Level)
-		cmd := m.AddNotification(msg.Message, severity, msg.Timeout)
+		cmd := m.AddNotification(msg.Message, msg.Level, msg.Timeout)
 		return m, cmd
 
 	// key presses

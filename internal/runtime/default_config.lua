@@ -85,6 +85,4 @@ end
 function Startup()
   ansicht.log.info("Hello from Lua")
   ansicht.status.set("ansicht")
-
-  ansicht.notify{message="Info with default timeout", severity="error"}
 end

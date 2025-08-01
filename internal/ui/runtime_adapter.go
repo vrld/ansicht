@@ -23,10 +23,16 @@ func (a *RuntimeAdapter) Status(message string) {
 	go a.Program.Send(message) // unhandled, but causes a redraw
 }
 
-func (a *RuntimeAdapter) Notify(message string, level string, timeout int) {
+func (a *RuntimeAdapter) Notify(message string, level string, timeout float64) {
+	levelEnum := NotificationInfo
+	if level == "warning" {
+		levelEnum = NotificationWarning
+	} else if level == "error" {
+		levelEnum = NotificationError
+	}
 	go a.Program.Send(NotifyMsg{
 		Message: message,
-		Level:   level,
+		Level:   levelEnum,
 		Timeout: timeout,
 	})
 }
@@ -78,6 +84,8 @@ func (a *RuntimeAdapter) SetTheme(theme any) {
 		colorAccentBright = theme.AccentBright
 		colorSecondaryBright = theme.SecondaryBright
 		colorTertiaryBright = theme.TertiaryBright
-		go a.Program.Send("theme_updated") // trigger redraw
+		colorWarning = theme.Warning
+		colorError = theme.Error
+		go a.Program.Send("theme_updated")
 	}
 }

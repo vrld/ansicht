@@ -14,6 +14,6 @@ var (
 	colorSecondaryBright = "12"
 	colorTertiaryBright  = "14"
 
-	colorWarning = "11" // Yellow
-	colorError   = "1"  // Red
+	colorWarning = "13"
+	colorError   = "9"
 )

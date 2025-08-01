@@ -23,6 +23,6 @@ type OpenInputEvent struct {
 
 type NotifyMsg struct {
 	Message string
-	Level   string
-	Timeout int
+	Level   NotificationLevel
+	Timeout float64
 }

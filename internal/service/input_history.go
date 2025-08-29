@@ -6,10 +6,6 @@ import "fmt"
 
 type inputHistory struct {
 	histories map[string][]string
-
-	// TODO: move selectIndex and related functionality out of the service and into
-	//       its own type
-	selectedIndex map[string]int
 }
 
 var inputHistoryInstance *inputHistory
@@ -17,8 +13,7 @@ var inputHistoryInstance *inputHistory
 func InputHistory() *inputHistory {
 	if inputHistoryInstance == nil {
 		inputHistoryInstance = &inputHistory{
-			histories:     make(map[string][]string),
-			selectedIndex: make(map[string]int),
+			histories: make(map[string][]string),
 		}
 	}
 	return inputHistoryInstance
@@ -28,38 +23,14 @@ func (h *inputHistory) Count(prompt string) int {
 	return len(h.histories[prompt])
 }
 
-func (h *inputHistory) Selected(prompt string) int {
-	return h.selectedIndex[prompt]
-}
-
-func (h *inputHistory) Select(prompt string, index int) error {
+func (h *inputHistory) Get(prompt string, index int) string {
 	history := h.histories[prompt]
-	if index < 0 || index > len(history) {
-		return fmt.Errorf("index %d out of bounds: (0, %d)", index, len(history))
+
+	if index >= len(history) {
+		return ""
 	}
 
-	h.selectedIndex[prompt] = index
-	return nil
-}
-
-func (h *inputHistory) First(prompt string) error {
-	return h.Select(prompt, 0)
-}
-
-func (h *inputHistory) Previous(prompt string) error {
-	return h.Select(prompt, h.Selected(prompt)-1)
-}
-
-func (h *inputHistory) Next(prompt string) error {
-	return h.Select(prompt, h.Selected(prompt)+1)
-}
-
-func (h *inputHistory) Last(prompt string) error {
-	return h.Select(prompt, h.Count(prompt)-1)
-}
-
-func (h *inputHistory) Reset(prompt string) {
-	h.selectedIndex[prompt] = h.Count(prompt)
+	return history[index]
 }
 
 func (h *inputHistory) Add(prompt, input string) {
@@ -79,17 +50,6 @@ func (h *inputHistory) Add(prompt, input string) {
 
 	history = append(history, input)
 	h.histories[prompt] = history
-}
-
-func (h *inputHistory) Get(prompt string) string {
-	history := h.histories[prompt]
-	currentIndex := h.selectedIndex[prompt]
-
-	if currentIndex >= len(history) {
-		return ""
-	}
-
-	return history[currentIndex]
 }
 
 func (h *inputHistory) Remove(prompt string, index int) error {
@@ -117,27 +77,77 @@ func (h *inputHistory) RemoveSlice(prompt string, lower, upper int) error {
 		lower, upper = upper, lower
 	}
 	if lower < 0 || lower >= length {
-		return fmt.Errorf("lower index %d out of bounds: (0, %d)", lower, length-1)
+		return fmt.Errorf("lower index %d out of bounds: 0 <= lower <= %d", lower, length-1)
 	}
 
 	if upper < 0 || upper >= length {
-		return fmt.Errorf("upper index %d out of bounds: (0, %d)", upper, length-1)
+		return fmt.Errorf("upper index %d out of bounds: 0 <= upper <= %d", upper, length-1)
 	}
-
-	currentIndex := h.selectedIndex[prompt]
 
 	// Remove the slice (inclusive)
 	newHistory := slices.Delete(history, lower, upper+1)
 	h.histories[prompt] = newHistory
 
-	// Adjust selection index
-	removedCount := upper - lower + 1
-	if currentIndex > upper {
-		h.selectedIndex[prompt] = currentIndex - removedCount
-	} else if currentIndex >= lower {
-		// Selected item was removed, move to end
-		h.selectedIndex[prompt] = len(newHistory)
+	return nil
+}
+
+func (h *inputHistory) Clear(prompt string) {
+	h.histories[prompt] = nil
+}
+
+func (h *inputHistory) ClearAll() {
+	h.histories = make(map[string][]string)
+}
+
+func (h *inputHistory) GetSelection(prompt string) *HistorySelection {
+	return &HistorySelection{
+		prompt: prompt,
+		index:  h.Count(prompt),
+	}
+}
+
+type HistorySelection struct {
+	prompt string
+	index  int
+}
+
+func (s *HistorySelection) Index() int {
+	return s.index
+}
+
+func (s *HistorySelection) Get() string {
+	return InputHistory().Get(s.prompt, s.index)
+}
+
+func (s *HistorySelection) Count() int {
+	return InputHistory().Count(s.prompt)
+}
+
+func (s *HistorySelection) Select(index int) error {
+	if index < 0 || index > s.Count() {
+		return fmt.Errorf("index %d out of bounds: 0 <= index <= %d", index, s.Count())
 	}
 
+	s.index = index
 	return nil
+}
+
+func (s *HistorySelection) First() error {
+	return s.Select(0)
+}
+
+func (s *HistorySelection) Previous() error {
+	return s.Select(s.index - 1)
+}
+
+func (s *HistorySelection) Next() error {
+	return s.Select(s.index + 1)
+}
+
+func (s *HistorySelection) Last() error {
+	return s.Select(s.Count() - 1)
+}
+
+func (s *HistorySelection) Reset() {
+	s.Select(s.Count())
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/vrld/ansicht/internal/model"
 	"github.com/vrld/ansicht/internal/runtime"
+	"github.com/vrld/ansicht/internal/service"
 )
 
 // sent when a search completes
@@ -33,6 +34,7 @@ type Model struct {
 	currentQueryString string
 	list               list.Model
 	input              textinput.Model
+	historySelection   *service.HistorySelection
 	spinner            spinner.Model
 	width              int
 	height             int

@@ -76,6 +76,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.focusInput = true
 		m.input.Placeholder = msg.Placeholder
 		m.input.Prompt = msg.Prompt
+		m.historySelection = service.InputHistory().GetSelection(msg.Prompt)
 		m.input.Focus()
 		return m, nil
 
@@ -112,19 +113,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case "esc":
 				m.focusInput = false
-				service.InputHistory().Reset(m.input.Prompt)
+				m.historySelection = nil
 				m.input.Reset()
 				return m, nil
 
 			case "up":
-				if err := service.InputHistory().Previous(m.input.Prompt); err == nil {
-					m.input.SetValue(service.InputHistory().Get(m.input.Prompt))
+				if err := m.historySelection.Previous(); err == nil {
+					m.input.SetValue(m.historySelection.Get())
 				}
 				return m, nil
 
 			case "down":
-				if err := service.InputHistory().Next(m.input.Prompt); err == nil {
-					m.input.SetValue(service.InputHistory().Get(m.input.Prompt))
+				if err := m.historySelection.Next(); err == nil {
+					m.input.SetValue(m.historySelection.Get())
 				}
 				return m, nil
 			}

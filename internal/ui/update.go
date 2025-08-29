@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"os/exec"
+
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vrld/ansicht/internal/db"
@@ -76,6 +78,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.input.Prompt = msg.Prompt
 		m.input.Focus()
 		return m, nil
+
+	case *exec.Cmd:
+		return m, tea.ExecProcess(msg, func(err error) tea.Msg {
+			m.runtime.OnExecCommandResult(err)
+			return nil
+		})
 
 	case runtime.SpawnResult:
 		m.runtime.HandleSpawnResult(msg)

@@ -125,7 +125,7 @@ func (d MessageDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 
 func (d MessageDelegate) renderLine(item MessageItem, styles messageStyles) string {
 	date := fmt.Sprintf("%11s  ", formatDate(item.Message.Date))
-	sender := fmt.Sprintf("%20s", truncate(formatEmailAddress(item.Message.From), 20)) // TODO: use only name (Sander <s@nd.er> => Sander)
+	sender := fmt.Sprintf("%20s", truncate(formatEmailAddress(item.Message.From), 20))
 	arrow := " → "
 	recipient := fmt.Sprintf("%-20s", truncate(formatEmailAddress(item.Message.To), 20))
 	tags := "  " + formatTags(item.Message.Tags) // TODO: replace tags (configurable)

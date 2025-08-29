@@ -23,6 +23,7 @@ type RuntimeInterface interface {
 	OnKey(keycode string) (handledKey bool)
 	HandleInput(input string)
 	HandleSpawnResult(msg runtime.SpawnResult)
+	OnExecCommandResult(err error)
 }
 
 type Model struct {

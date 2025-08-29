@@ -1,59 +1,73 @@
--- keep lsp errors contained here
-local key = key
-local ansicht = ansicht
+local ansicht = ...
 
--- map keys to functions
-key.r = ansicht.refresh
+-- global (!) table that maps key presses to functions
+key = {
+  r = ansicht.refresh,
+  q = ansicht.quit,
 
--- multiple bindings can map to the same event
-key.q = ansicht.quit
+  -- you can bind any function
+  ["/"] = function()
+    -- switches to input mode
+    ansicht.input {
+      prompt = "notmuch search ",
+      placeholder = "tag:unread",
+      -- called with the input text when the input is committed
+      with_input = ansicht.query.new,
+    }
+  end,
+  left = ansicht.query.prev,
+  right = ansicht.query.next,
+
+  -- mark messages to fill ansicht.messages.marked()
+  [" "] = ansicht.marks.toggle,
+  i = ansicht.marks.invert,
+  x = ansicht.marks.clear,
+
+  enter = function()
+    -- get the highlighted message with fields:
+    --   id,
+    --   thread_id,
+    --   date,
+    --   filename,
+    --   from,
+    --   to,
+    --   subject.
+    local message = ansicht.messages.selected()
+
+    -- run external commands
+    ansicht.exec {
+      "xdg-open", message.filename,
+      next = function(err)
+        if err == nil then
+          ansicht.tag(message, "-unread")
+          ansicht.refresh{ message }
+        end
+      end,
+    }
+  end,
+}
+
+-- define aliases like so
 key["ctrl+c"] = key.q
 key["ctrl+d"] = key.q
 
--- create and navigate queries
-key["/"] = function()
-  ansicht.input{
-    placeholder = "tag:unread",
-    prompt = "notmuch search ",
-    with_input = function(query)
-      ansicht.query.new(query)
-      ansicht.status.set("")
-    end,
-  }
-end
-key.left = ansicht.query.prev
-key.right = ansicht.query.next
 
--- mark messages for tagging
-key[" "] = ansicht.marks.toggle
-key.i = ansicht.marks.invert
-key.x = ansicht.marks.clear
-
-key.enter = function()
-  local message = ansicht.messages.selected() -- this gives the currently highlighted/selected message
-  ansicht.spawn{
-    "/home/matthias/Projekte/übersicht.mail/einsicht/result/bin/einsicht",
-    message.filename,
-    next=function()
-      ansicht.tag(message, "-unread")
-      ansicht.status.set("Tagged -unread")
-      ansicht.refresh { message }
-    end
-  }
-end
+-- use full lua scripting
 
 -- wrapper function that returns a function that tags selected messages
--- with the given tags and returns a refresh event
+-- with the given tags and refreshes the messages
 local function tag_selected_messages(tags)
   local selected = ansicht.messages.selected()
   local messages_of_interest = { selected }
-  -- messages.marked() gives a table of all messages marked with event.marks.*
+
+  -- messages.marked() gives a table of all messages marked with `ansicht.marks.*` (see above)
   for _, message in pairs(ansicht.messages.marked()) do
     if selected ~= message then
       messages_of_interest[#messages_of_interest + 1] = message
     end
   end
-  -- notmuch.tag({msg1, msg2}, "+tag1", "-tag2", "+tag3")
+
+  -- ansicht.tag({msg1, msg2}, "+tag1", "-tag2", "+tag3")
   -- equivalent to notmuch tag +tag1 -tag2 +tag3 id:... id:...
   ansicht.tag(messages_of_interest, table.unpack(tags))
 
@@ -61,11 +75,7 @@ local function tag_selected_messages(tags)
   ansicht.refresh(messages_of_interest)
 end
 
-key.d = function() tag_selected_messages { "+deleted", "-unread", "-inbox" } end
-key.a = function() tag_selected_messages { "+archive", "-inbox" } end
-key.u = function() tag_selected_messages { "+unread" } end
-
-key.t = function ()
+key.t = function()
   ansicht.input {
     placeholder = "-unread +act",
     prompt = "notmuch tag ",
@@ -82,7 +92,11 @@ key.t = function ()
   }
 end
 
+key.d = function() tag_selected_messages { "+deleted", "-unread", "-inbox" } end
+key.a = function() tag_selected_messages { "+archive", "-inbox" } end
+key.u = function() tag_selected_messages { "+unread" } end
+
+-- run code that depends on the UI here
 function Startup()
-  ansicht.log.info("Hello from Lua")
   ansicht.status.set("ansicht")
 end

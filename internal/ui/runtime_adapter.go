@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"os/exec"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vrld/ansicht/internal/runtime"
 	"github.com/vrld/ansicht/internal/service"
@@ -25,9 +27,10 @@ func (a *RuntimeAdapter) Status(message string) {
 
 func (a *RuntimeAdapter) Notify(message string, level string, timeout float64) {
 	levelEnum := NotificationInfo
-	if level == "warning" {
+	switch level {
+	case "warning":
 		levelEnum = NotificationWarning
-	} else if level == "error" {
+	case "error":
 		levelEnum = NotificationError
 	}
 	go a.Program.Send(NotifyMsg{
@@ -46,6 +49,10 @@ func (a *RuntimeAdapter) Input(prompt, placeholder string) {
 
 func (a *RuntimeAdapter) SpawnResult(result runtime.SpawnResult) {
 	go a.Program.Send(result)
+}
+
+func (a *RuntimeAdapter) Exec(cmd *exec.Cmd) {
+	go a.Program.Send(cmd)
 }
 
 func (a *RuntimeAdapter) QueryNew(query string) {

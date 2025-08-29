@@ -1,6 +1,10 @@
 package runtime
 
-import "github.com/Shopify/go-lua"
+import (
+	"os/exec"
+
+	"github.com/Shopify/go-lua"
+)
 
 type ControllerAdapter interface {
 	Quit()
@@ -8,6 +12,7 @@ type ControllerAdapter interface {
 	Status(message string)
 	Notify(message string, level string, timeout float64)
 	Input(prompt, placeholder string)
+	Exec(cmd *exec.Cmd)
 	SpawnResult(result SpawnResult)
 	SetTheme(theme any)
 
@@ -27,6 +32,7 @@ func (a *NullAdapter) Refresh()                       {}
 func (a *NullAdapter) Status(string)                  {}
 func (a *NullAdapter) Notify(string, string, float64) {}
 func (a *NullAdapter) Input(string, string)           {}
+func (a *NullAdapter) Exec(*exec.Cmd)                 {}
 func (a *NullAdapter) SpawnResult(SpawnResult)        {}
 func (a *NullAdapter) SetTheme(any)                   {}
 

@@ -57,6 +57,7 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 		{Name: "quit", Function: runtime.luaQuit},
 		{Name: "refresh", Function: runtime.luaRefresh},
 		{Name: "spawn", Function: runtime.luaSpawn},
+		{Name: "exec", Function: runtime.luaExec},
 		{Name: "tag", Function: luaNotmuchTag},
 		{Name: "input", Function: runtime.luaInput},
 		{Name: "notify", Function: runtime.luaNotify},
@@ -110,8 +111,14 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 	L.SetGlobal("ansicht")
 
 	// load config
-	if err := lua.DoString(L, luaCode); err != nil {
-		return nil, fmt.Errorf("error executing Lua config: %w", err)
+	if err := lua.LoadString(L, luaCode); err != nil {
+		return nil, fmt.Errorf("error loading config: %w", err)
+	}
+
+	// allows `local ansicht = ...`
+	L.Global("ansicht")
+	if err := L.ProtectedCall(1, lua.MultipleReturns, 0); err != nil {
+		return nil, fmt.Errorf("error running config: %w", err)
 	}
 
 	return runtime, nil

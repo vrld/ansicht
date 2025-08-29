@@ -23,7 +23,17 @@ func lSetFieldNil(L *lua.State, index int, key string) {
 func lSetFieldString(L *lua.State, index int, key string, value string) {
 	L.PushString(key)
 	L.PushString(value)
-	if index != lua.RegistryIndex {
+	if index == lua.RegistryIndex {
+		L.SetTable(lua.RegistryIndex)
+	} else {
+		L.SetTable(index - 2)
+	}
+}
+
+func lSetIndexString(L *lua.State, index int, tableIndex int, value string) {
+	L.PushInteger(tableIndex)
+	L.PushString(value)
+	if index == lua.RegistryIndex {
 		L.SetTable(lua.RegistryIndex)
 	} else {
 		L.SetTable(index - 2)
@@ -33,7 +43,7 @@ func lSetFieldString(L *lua.State, index int, key string, value string) {
 func lSetFieldInteger(L *lua.State, index int, key string, value int) {
 	L.PushString(key)
 	L.PushInteger(value)
-	if index != lua.RegistryIndex {
+	if index == lua.RegistryIndex {
 		L.SetTable(lua.RegistryIndex)
 	} else {
 		L.SetTable(index - 2)
@@ -43,7 +53,7 @@ func lSetFieldInteger(L *lua.State, index int, key string, value int) {
 func lSetFieldBool(L *lua.State, index int, key string, value bool) {
 	L.PushString(key)
 	L.PushBoolean(value)
-	if index != lua.RegistryIndex {
+	if index == lua.RegistryIndex {
 		L.SetTable(lua.RegistryIndex)
 	} else {
 		L.SetTable(index - 2)

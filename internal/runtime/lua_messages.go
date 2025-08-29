@@ -25,22 +25,35 @@ func (r *Runtime) luaMessagesMarked(L *lua.State) int {
 }
 
 // pushes a single message on the stack:
-// { __type = "ansicht.Message", id = "...", thread_id = "...", filename = "..." }
+// { __type = "ansicht.Message", id = "...", thread_id = "...", filename = "...", ... }
 const LUA_TYPE_ID_MESSAGE = "ansicht.Message"
 
 func pushMessage(L *lua.State, message *model.Message) int {
-	L.CreateTable(0, 4)
-	L.PushString(LUA_TYPE_ID_MESSAGE)
-	L.SetField(-2, "__type")
+	L.CreateTable(0, 10)
+	lSetFieldString(L, -1, "__type", LUA_TYPE_ID_MESSAGE)
+	lSetFieldString(L, -1, "id", string(message.ID))
+	lSetFieldString(L, -1, "thread_id", message.ThreadID)
+	lSetFieldString(L, -1, "date", message.Date.String())
+	lSetFieldString(L, -1, "filename", string(message.Filename))
+	lSetFieldString(L, -1, "from", message.From)
+	lSetFieldString(L, -1, "to", message.To)
+	lSetFieldString(L, -1, "subject", message.Subject)
 
-	L.PushString(string(message.ID))
-	L.SetField(-2, "id")
+	L.CreateTable(len(message.Tags), 0)
+	for i, tag := range message.Tags {
+		L.PushString(tag)
+		L.RawSetInt(-2, i + 1)
+	}
+	L.SetField(-2, "tags")
 
-	L.PushString(string(message.ThreadID))
-	L.SetField(-2, "thread_id")
-
-	L.PushString(string(message.Filename))
-	L.SetField(-2, "filename")
+	L.CreateTable(0, 6)
+	lSetFieldBool(L, -1, "draft", message.Flags.Draft)
+	lSetFieldBool(L, -1, "flagged", message.Flags.Flagged)
+	lSetFieldBool(L, -1, "passed", message.Flags.Passed)
+	lSetFieldBool(L, -1, "replied", message.Flags.Replied)
+	lSetFieldBool(L, -1, "seen", message.Flags.Seen)
+	lSetFieldBool(L, -1, "trashed", message.Flags.Trashed)
+	L.SetField(-2, "flags")
 
 	return 1
 }

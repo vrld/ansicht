@@ -2,7 +2,7 @@ local ansicht = ...
 
 -- global (!) table that maps key presses to functions
 key = {
-  r = ansicht.refresh,
+  R = ansicht.refresh,
   q = ansicht.quit,
 
   -- you can bind any function
@@ -45,12 +45,22 @@ key = {
       end,
     }
   end,
+
+  -- get reply templates from notmuch
+  r = function()
+    local template = ansicht.reply(ansicht.messages.selected())
+    ansicht.exec { "vim", stdin = template }
+  end,
+
+  g = function()
+    local template = ansicht.reply_group(ansicht.messages.selected())
+    ansicht.exec { "vim", stdin = template }
+  end,
 }
 
 -- define aliases like so
 key["ctrl+c"] = key.q
 key["ctrl+d"] = key.q
-
 
 -- use full lua scripting
 

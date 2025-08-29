@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -59,6 +60,8 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 		{Name: "spawn", Function: runtime.luaSpawn},
 		{Name: "exec", Function: runtime.luaExec},
 		{Name: "tag", Function: luaNotmuchTag},
+		{Name: "reply", Function: luaNotmuchReply},
+		{Name: "reply_group", Function: luaNotmuchReplyGroup},
 		{Name: "input", Function: runtime.luaInput},
 		{Name: "notify", Function: runtime.luaNotify},
 	})
@@ -211,6 +214,42 @@ func luaNotmuchTag(L *lua.State) int {
 	}
 
 	return 0
+}
+
+// Generate an empail template with `notmuch reply`
+func luaNotmuchReplyImpl(L *lua.State, whom string) int {
+	argc := L.Top()
+	if argc < 1 || !isMessage(L, 1) {
+		lua.Errorf(L, "Expecting message argument")
+		panic("unreachable")
+	}
+
+	messageId, ok := getMessageField(L, 1, "id")
+	if !ok {
+		lua.Errorf(L, "message has no id")
+		panic("unreachable")
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	cmd := exec.Command("notmuch", "reply", "--reply-to", whom, fmt.Sprint("id:", messageId))
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	cmd.Run()
+
+	L.PushString(stdout.String())
+	L.PushString(stderr.String())
+
+	return 2
+}
+
+func luaNotmuchReply(L *lua.State) int {
+	return luaNotmuchReplyImpl(L, "sender")
+}
+
+func luaNotmuchReplyGroup(L *lua.State) int {
+	return luaNotmuchReplyImpl(L, "group")
 }
 
 // returns the current status message

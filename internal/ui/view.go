@@ -145,15 +145,13 @@ func (m *Model) renderStatusLine() string {
 
 	var rightStatus string
 	if m.isLoading {
-		rightStatus = fmt.Sprintf("%s Searching...", m.spinner.View())
+		rightStatus = fmt.Sprintf(" Searching... %s", m.spinner.View())
 	} else if query, ok := service.Queries().Current(); ok {
 		markedCount := service.Messages().MarkedCount()
 		totalCount := service.Messages().Count()
 		currentPos := m.list.Index() + 1
-
-		rightStatus = fmt.Sprintf("%s｜%d/%d｜%d marked", query.Query, currentPos, totalCount, markedCount)
+		rightStatus = fmt.Sprintf("%s｜%d/%d｜%d marked ｢%s｣", query.Query, currentPos, totalCount, markedCount, time.Now().Format("15:04"))
 	}
-	rightStatus = fmt.Sprintf("👀 %s ｢%s｣", rightStatus, time.Now().Format("15:04"))
 
 	spacing := max(m.width-2-lipgloss.Width(leftStatus)-lipgloss.Width(rightStatus), 1)
 	return lipgloss.NewStyle().

@@ -1,8 +1,11 @@
 package service
 
-import "slices"
-
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"slices"
+)
 
 type inputHistory struct {
 	histories map[string][]string
@@ -22,6 +25,24 @@ func InputHistory() *inputHistory {
 		}
 	}
 	return inputHistoryInstance
+}
+
+func (h *inputHistory) Load(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(data, &h.histories)
+}
+
+func (h *inputHistory) Save(path string) error {
+	encoded, err := json.Marshal(h.histories)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, encoded, 0600)
 }
 
 func (h *inputHistory) Count(prompt string) int {

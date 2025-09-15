@@ -85,7 +85,7 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 	})
 	L.SetField(-2, "theme")
 
-	// messages access
+	// messages
 	lua.NewLibrary(L, []lua.RegistryFunction{
 		{Name: "all", Function: runtime.luaMessagesAll},
 		{Name: "marked", Function: runtime.luaMessagesMarked},
@@ -93,7 +93,7 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 	})
 	L.SetField(-2, "messages")
 
-	// query subgroup
+	// query
 	lua.NewLibrary(L, []lua.RegistryFunction{
 		{Name: "new", Function: runtime.luaQueryNew},
 		{Name: "next", Function: runtime.luaQuerySelectNext},
@@ -101,7 +101,7 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 	})
 	L.SetField(-2, "query")
 
-	// marks subgroup
+	// marks
 	lua.NewLibrary(L, []lua.RegistryFunction{
 		{Name: "toggle", Function: runtime.luaMarksToggle},
 		{Name: "invert", Function: runtime.luaMarksInvert},
@@ -109,6 +109,18 @@ func runtimeFromString(luaCode string) (*Runtime, error) {
 	})
 	L.SetField(-2, "marks")
 
+	// history
+	lua.NewLibrary(L, []lua.RegistryFunction{
+		{Name: "clear", Function: luaHistoryClear},
+		{Name: "count", Function: luaHistoryCount},
+		{Name: "add", Function: luaHistoryAdd},
+		{Name: "get", Function: luaHistoryGet},
+		{Name: "load", Function: luaHistoryLoad},
+		{Name: "save", Function: luaHistorySave},
+	})
+	L.SetField(-2, "history")
+
+	// log
 	// log.<level>(message)  =>  real-log(LEVEL, message)
 	lua.NewLibrary(L, []lua.RegistryFunction{
 		{Name: "__index", Function: runtime.luaLogMetatableIndex},
@@ -222,7 +234,7 @@ func luaNotmuchTag(L *lua.State) int {
 	return 0
 }
 
-// Generate an empail template with `notmuch reply`
+// Generate an email template with `notmuch reply`
 func luaNotmuchReplyImpl(L *lua.State, whom string) int {
 	argc := L.Top()
 	if argc < 1 || !isMessage(L, 1) {
@@ -268,9 +280,7 @@ func (r *Runtime) luaStatusGet(L *lua.State) int {
 // meant to be used as __index function
 // effectively:
 // ansicht.log.__index = function(_, level)
-//
 //	return function(message) log(level, message) end
-//
 // end
 func (r *Runtime) luaLogMetatableIndex(L *lua.State) int {
 	if key, ok := L.ToString(2); ok {

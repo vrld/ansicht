@@ -2,10 +2,14 @@ local ansicht = ...
 
 -- global (!) table that maps key presses to functions
 key = {
-  R = ansicht.refresh,
-  q = ansicht.quit,
+  R = ansicht.refresh,  -- ansicht.refresh() reloads the query
 
   -- you can bind any function
+  q = function()
+    ansicht.history.save()  -- save input history between sessions
+    ansicht.quit()
+  end,
+
   ["/"] = function()
     -- switches to input mode
     ansicht.input {
@@ -109,4 +113,5 @@ key.u = function() tag_selected_messages { "+unread" } end
 -- run code that depends on the UI here
 function Startup()
   ansicht.status.set("ansicht")
+  ansicht.history.load()  -- load input history from previous session
 end

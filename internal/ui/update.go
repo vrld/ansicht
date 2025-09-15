@@ -74,9 +74,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case OpenInputEvent:
 		m.focusInput = true
+		m.historySelection = service.InputHistory().GetSelection(msg.Prompt)
 		m.input.Placeholder = msg.Placeholder
 		m.input.Prompt = msg.Prompt
-		m.historySelection = service.InputHistory().GetSelection(msg.Prompt)
 		m.input.Focus()
 		return m, nil
 
@@ -108,6 +108,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.runtime.HandleInput(query)
 				}
 				m.focusInput = false
+				m.historySelection = nil
 				m.input.Reset()
 				return m, nil
 

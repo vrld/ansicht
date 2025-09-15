@@ -13,7 +13,7 @@ type RuntimeAdapter struct {
 }
 
 func (a *RuntimeAdapter) Quit() {
-	go a.Program.Send(tea.QuitMsg{})
+	go a.Program.Quit()
 }
 
 func (a *RuntimeAdapter) Refresh() {

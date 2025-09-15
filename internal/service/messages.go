@@ -20,6 +20,11 @@ type messages struct {
 
 var messagesInstance *messages
 
+func init() {
+	// create singleton
+	_ = Messages()
+}
+
 func Messages() *messages {
 	if messagesInstance == nil {
 		messagesInstance = &messages{}

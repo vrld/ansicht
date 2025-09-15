@@ -10,6 +10,11 @@ type inputHistory struct {
 
 var inputHistoryInstance *inputHistory
 
+func init() {
+	// create singleton
+	_ = InputHistory()
+}
+
 func InputHistory() *inputHistory {
 	if inputHistoryInstance == nil {
 		inputHistoryInstance = &inputHistory{

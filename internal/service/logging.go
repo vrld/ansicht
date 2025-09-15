@@ -24,6 +24,11 @@ type logger struct {
 
 var loggerInstance *logger
 
+func init() {
+	// create singleton
+	_ = Logger()
+}
+
 func Logger() *logger {
 	if loggerInstance == nil {
 		loggerInstance = &logger{}

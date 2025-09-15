@@ -9,6 +9,11 @@ type status struct {
 
 var statusInstance *status
 
+func init() {
+	// create singleton
+	_ = Status()
+}
+
 func Status() *status {
 	if statusInstance == nil {
 		statusInstance = &status{

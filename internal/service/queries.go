@@ -12,6 +12,11 @@ type queries struct {
 
 var queriesInstance *queries
 
+func init() {
+	// create singleton
+	_ = Queries()
+}
+
 func Queries() *queries {
 	if queriesInstance != nil {
 		return queriesInstance

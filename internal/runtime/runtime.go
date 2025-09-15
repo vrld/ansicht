@@ -24,24 +24,30 @@ type Runtime struct {
 var defaultConfig string
 
 func LoadRuntime() (*Runtime, error) {
-	// Try XDG_CONFIG_HOME first
-	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" {
-		content, err := os.ReadFile(filepath.Join(xdgConfigHome, "ansicht", "init.lua"))
-		if err == nil {
-			return runtimeFromString(string(content))
-		}
+	xdgConfigHome := findXdgDir("XDG_CONFIG_HOME", ".config")
+	if xdgConfigHome == "" {
+		panic("cannot determine XDG_CONFIG_HOME")
 	}
 
-	if home, err := os.UserHomeDir(); err == nil {
-		// maybe XDG_CONFIG_HOME was not set?
-		content, err := os.ReadFile(filepath.Join(home, ".config", "ansicht", "init.lua"))
-		if err == nil {
-			return runtimeFromString(string(content))
-		}
+	content, err := os.ReadFile(filepath.Join(xdgConfigHome, "ansicht", "init.lua"))
+	if err == nil {
+		return runtimeFromString(string(content))
 	}
 
 	// no user config
 	return runtimeFromString(defaultConfig)
+}
+
+func findXdgDir(name, defaultValue string) string {
+	if value := os.Getenv(name); value != "" {
+		return value
+	}
+
+	if home, err := os.UserHomeDir(); err == nil {
+		return filepath.Join(home, defaultValue)
+	}
+
+	return ""
 }
 
 func runtimeFromString(luaCode string) (*Runtime, error) {
